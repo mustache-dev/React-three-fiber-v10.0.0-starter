@@ -23,7 +23,7 @@ export const WobblySphere = () => {
 
   const { n } = useLocalNodes(() => ({
     n: mul(
-      texture(noise, normalGeometry.add(time.mul(0.05)))
+      texture(noise, normalGeometry.add(time.mul(100)))
         .r.sub(0.5)
         .mul(3),
       0.1,

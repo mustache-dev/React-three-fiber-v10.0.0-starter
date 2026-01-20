@@ -10,15 +10,15 @@ export const WobblySphere2 = () => {
     noise.minFilter = noise.magFilter = LinearFilter;
 
     const material = useMemo(() => {
-        const mat = new MeshStandardNodeMaterial({color: "#ff0000"});
+        const mat = new MeshStandardNodeMaterial({ color: "#ff0000" });
         const n = mul(texture(noise, normalGeometry.add(time.mul(0.1))).r.sub(0.5).mul(2), 0.1);
         mat.positionNode = positionLocal.add(n.mul(normalGeometry).mul(2))
         return mat;
     }, []);
     return (
         <mesh onFramed={(inView: boolean) => {
-        console.log(inView ? "Object entered view" : "Object left view");
-      }} position={[-1.5, 0, 0]} material={material}>
+            console.log(inView ? "Object entered view" : "Object left view");
+        }} position={[-1.5, 0, 0]} material={material}>
             <sphereGeometry args={[1, 32, 32]} />
         </mesh>
     )

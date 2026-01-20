@@ -2,22 +2,38 @@
 import { Canvas } from '@react-three/fiber'
 import { WobblySphere } from './components/wobblySphere'
 import { Lights } from './components/lights'
-import { OrbitControls } from '@react-three/drei'
+import { KeyboardControls, OrbitControls } from '@react-three/drei'
 import { PostProcessing } from './components/postprocessing'
 import { WobblySphere2 } from './components/wobblySphere2'
+import { EnemySystem } from './ecs/enemy'
+import { Floor } from './components/floor'
+import { HalfFloatType } from 'three'
+import { PlayerController } from './PlayerController'
 
 function App() {
 
   // wobblysphere2 update the material so each changes trigger a re-render, better developer experience but doesn't follow the new R3F v10 API
+  const keyboardMap = [
+    { name: "up", keys: ["KeyW", "ArrowUp"] },
+    { name: "down", keys: ["KeyS", "ArrowDown"] },
+    { name: "left", keys: ["KeyA", "ArrowLeft"] },
+    { name: "right", keys: ["KeyD", "ArrowRight"] },
+    { name: "dash", keys: ["ShiftLeft"] },
+  ];
   return (
     <>
-    <Canvas renderer={{ antialias: false, depth:false, stencil:false, alpha:false, forceWebGL: false }}>
-      <WobblySphere/>
-      <WobblySphere2/>
-      <Lights/>
-      <OrbitControls/>
-      <PostProcessing/>
-    </Canvas>
+      <Canvas flat shadows='soft' renderer={{ antialias: false, depth: false, stencil: false, alpha: false, forceWebGL: false, outputType: HalfFloatType }}>
+        {/* <WobblySphere/>
+      <WobblySphere2/> */}
+        <Floor />
+        <Lights />
+        <PostProcessing />
+        <KeyboardControls map={keyboardMap}>
+          <PlayerController />
+        </KeyboardControls>
+        {/* ECS Enemy System - spawns and manages enemy entities */}
+        <EnemySystem initialCount={8} spawnRadius={6} />
+      </Canvas>
 
     </>
   )

@@ -1,0 +1,27 @@
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  position: relative;
+}
+
+.jauge {
+  height: 100%;
+  width: 100%;
+  background: rgb(202, 90, 90);
+  z-index: 2;
+  transform-origin: left center;
+  will-change: transform;
+}
+
+.jauge-lerp {
+  height: 100%;
+  width: 100%;
+  background: rgb(255, 255, 255);
+  position: absolute;
+  z-index: 1;
+  transform-origin: left center; 
+  will-change: transform;
+}

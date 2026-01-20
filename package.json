@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@react-three/drei": "^11.0.0-alpha.4",
-    "@react-three/fiber": "^10.0.0-alpha.1",
+    "@react-three/fiber": "10.0.0-alpha.1",
+    "gsap": "^3.14.2",
+    "koota": "^0.6.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -23,9 +27,11 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "prettier": "^3.8.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"

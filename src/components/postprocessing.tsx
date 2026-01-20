@@ -1,7 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
-import { pass, mrt, output, velocity, uniform } from "three/tsl";
+import { pass, mrt, output, velocity, uniform, oneMinus, vec3, vec2, screenUV, length, smoothstep } from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
 import { smaa } from "three/examples/jsm/tsl/display/SMAANode.js";
 
@@ -29,13 +29,20 @@ export const PostProcessing = () => {
       }),
     );
 
+    const center = vec2(0.5)
+    const vignette = smoothstep(0., 0.5, oneMinus(length(screenUV.sub(center))).pow(2.))
+
     const scenePassColor = scenePass.getTextureNode("output"); // Your scene's color
     const scenePassVelocity = scenePass.getTextureNode("velocity"); // needed for GTAO, motionBlur or TRAA
 
-    const bloomPass = scenePassColor.add(bloom(scenePassColor, 0.25, 0., 0.)) // strength, radius, threshold
-    bloomPass._nMips = 2; // secret sauce
+    // Screen blend mode: 1 - (1 - base) * (1 - blend)
+    // Gives a brighter, less blown-out result than additive
+    const bloomResult = bloom(scenePassColor.mul(vignette), 0.15, 1, 0.) // strength, radius, threshold
+    // bloomResult._nMips = 0; // secret sauce
 
-    const finalOutput = bloomPass
+    const bloomPass = scenePassColor.add(bloomResult)
+
+    const finalOutput = smaa(bloomPass)
 
     const postProcessing = new THREE.PostProcessing(renderer);
     postProcessing.outputNode = finalOutput;
@@ -51,7 +58,7 @@ export const PostProcessing = () => {
     };
   }, [renderer, scene, camera, size]);
 
-    useFrame(({ renderer, scene, camera }) => {
+  useFrame(({ renderer, scene, camera }) => {
     if (postProcessingRef.current) {
       renderer.clear();
       postProcessingRef.current.render();

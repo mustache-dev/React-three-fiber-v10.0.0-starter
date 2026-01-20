@@ -25,7 +25,7 @@ export const WobblySphere = () => {
     n: mul(
       texture(noise, normalGeometry.add(time.mul(0.05)))
         .r.sub(0.5)
-        .mul(3),
+        .mul(2),
       0.1,
     ),
   }));

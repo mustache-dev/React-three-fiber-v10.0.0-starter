@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
+import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo, useState } from 'react'
 import { useFrame, useGraph } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { SkeletonUtils } from 'three-stdlib'
@@ -38,7 +38,7 @@ export type CapsHandle = {
 // Constants
 // ============================================================================
 
-const ATTACK_SPEED = 2.5
+const ATTACK_SPEED = 3
 const SPIN_ATTACK_SPEED = 1.5
 const CHARGE_TIME_MS = 500
 
@@ -48,6 +48,11 @@ const CHARGE_TIME_MS = 500
 
 export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) => {
   const group = useRef<THREE.Group>(null)
+  const swordRef = useRef<THREE.SkinnedMesh>(null)
+  const swordRef2 = useRef<THREE.Group>(null)
+  const swordBoneRef = useRef<THREE.Bone | null>(null)
+  const target = useRef<THREE.Mesh>(null)
+  const setTarget = useGameStore((s) => s.setTarget)
 
   // GLTF & Animations
   const { scene, animations } = useGLTF('/caps.glb')
@@ -110,16 +115,11 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     s.currentAnimation = name
   }
 
-  // ---------------------------------------------------------------------------
-  // Input Handlers
-  // ---------------------------------------------------------------------------
-
   const onMouseDown = () => {
     const s = state.current
     s.isHolding = true
     s.holdStartTime = Date.now()
 
-    // Only charge if not already attacking
     if (!s.isAnimating) {
       s.isCharging = true
       setIsCharging(true)
@@ -140,15 +140,12 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     const isFullyCharged = holdDuration >= CHARGE_TIME_MS && wasCharging
 
     if (isFullyCharged) {
-      // Spin attack (only if we were actually charging)
       triggerSpinAttack()
       playAnimation('spin-attack', 0.1)
     } else if (!s.isAnimating) {
-      // Quick attack - not animating, play immediately
       playAnimation(s.nextAttack, 0.1)
       s.nextAttack = s.nextAttack === 'attack01' ? 'attack02' : 'attack01'
     } else {
-      // Currently animating - queue the next attack
       s.queuedAttack = true
     }
   }
@@ -166,21 +163,16 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
         const s = state.current
         s.isAnimating = false
 
-        // Clear spin attacking state
         if (finishedName === 'spin-attack') {
           setSpinAttacking(false)
         }
 
-        // Process queued attack
         if (s.queuedAttack) {
           s.queuedAttack = false
-          // Small delay to let animation system settle
           setTimeout(() => {
             if (!state.current.isAnimating) {
               const nextAnim = state.current.nextAttack
               state.current.nextAttack = nextAnim === 'attack01' ? 'attack02' : 'attack01'
-
-              // Manually trigger animation
               actions[nextAnim]?.reset().fadeIn(0.1).play()
               const action = actions[nextAnim]
               if (action) {
@@ -200,29 +192,40 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     return () => mixer?.removeEventListener('finished', onFinished)
   }, [mixer, setSpinAttacking, actions])
 
-  // ---------------------------------------------------------------------------
-  // Expose Methods
-  // ---------------------------------------------------------------------------
-
   useImperativeHandle(ref, () => ({ onMouseDown, onMouseUp }), [])
 
-  // ---------------------------------------------------------------------------
-  // Initial Animation
-  // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    playAnimation('stance')
+    const action = actions['stance']?.reset().fadeIn(0.1).play()
+    if (action) {
+      state.current.currentAnimation = 'stance'
+    }
   }, [actions])
-
-  // ---------------------------------------------------------------------------
-  // Glow Animation Loop
-  // ---------------------------------------------------------------------------
 
   useFrame((_, delta) => {
     if (!glowUniformRef.current) return
 
     const s = state.current
     const currentGlow = glowUniformRef.current.value
+
+    // Find sword bone once
+    if (!swordBoneRef.current && swordRef.current?.skeleton) {
+      const bones = swordRef.current.skeleton.bones
+      swordBoneRef.current = bones.find(b => b.name === 'arm') || bones[bones.length - 1]
+    }
+
+    // Copy bone's world transform to swordRef2
+    if (swordRef2.current && swordBoneRef.current && group.current) {
+      // Update entire hierarchy first
+      group.current.updateMatrixWorld(true)
+
+      // Now get the bone's world position/rotation
+
+      const position = swordBoneRef.current.position.clone()
+      const quaternion = swordBoneRef.current.quaternion.clone()
+
+      // swordRef2.current.position.copy(position)
+      swordRef2.current.quaternion.copy(quaternion)
+    }
 
     if (s.isCharging && s.isHolding) {
       // Charging: gradually ramp up glow
@@ -235,18 +238,18 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     } else {
       // Idle: fade out smoothly
       s.chargeProgress = 0
-      glowUniformRef.current.value = THREE.MathUtils.lerp(currentGlow, 0, delta * 4)
+      glowUniformRef.current.value = THREE.MathUtils.lerp(currentGlow, 0, delta * 12)
     }
   })
 
-  // ---------------------------------------------------------------------------
-  // Materials
-  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    setTarget(target.current)
+  }, [target.current])
 
   const capsMaterial = useMemo(() => {
     const mat = new MeshStandardNodeMaterial()
     mat.roughness = 0.3
-    mat.colorNode = color('#416EFF')
+    mat.colorNode = color('#63acff')
     return mat
   }, [])
 
@@ -254,7 +257,7 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     const u = uniform(0)
     const mat = new MeshStandardNodeMaterial()
     const baseColor = color('#FCFBE6')
-    const glowColor = color('#FFC579').mul(10)
+    const glowColor = color('#FF7139').mul(10)
     mat.colorNode = mix(baseColor, glowColor, u)
     return { swordMaterial: mat, glowU: u }
   }, [])
@@ -269,39 +272,49 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   // ---------------------------------------------------------------------------
 
   return (
-    <group ref={group} {...props} dispose={null} scale={0.5} rotation={[0, Math.PI, 0]}>
-      <group name="Scene">
-        <group name="Armature">
-          <primitive object={nodes.body} />
-          <skinnedMesh
-            name="Cylinder"
-            geometry={nodes.Cylinder.geometry}
-            material={capsMaterial}
-            skeleton={nodes.Cylinder.skeleton}
-            castShadow
-            receiveShadow
-          />
-          <group name="Sphere">
+    <>
+      <group ref={swordRef2}>
+        <mesh rotation={[0, Math.PI, 0]} ref={target} position={[0, -1.85, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[0.5, 1.7]} />
+          <meshStandardMaterial color="red" visible={false} />
+        </mesh>
+      </group>
+
+      <group ref={group} {...props} dispose={null} scale={0.5} rotation={[0, Math.PI, 0]}>
+        <group name="Scene">
+          <group name="Armature">
+            <primitive object={nodes.body} />
             <skinnedMesh
-              name="Sphere001"
-              geometry={nodes.Sphere001.geometry}
+              name="Cylinder"
+              geometry={nodes.Cylinder.geometry}
               material={capsMaterial}
-              skeleton={nodes.Sphere001.skeleton}
+              skeleton={nodes.Cylinder.skeleton}
               castShadow
               receiveShadow
             />
-            <skinnedMesh
-              name="Sphere001_1"
-              geometry={nodes.Sphere001_1.geometry}
-              material={swordMaterial}
-              skeleton={nodes.Sphere001_1.skeleton}
-              castShadow
-              receiveShadow
-            />
+            <group name="Sphere">
+              <skinnedMesh
+                name="Sphere001"
+                geometry={nodes.Sphere001.geometry}
+                material={capsMaterial}
+                skeleton={nodes.Sphere001.skeleton}
+                castShadow
+                receiveShadow
+              />
+              <skinnedMesh
+                ref={swordRef}
+                name="Sphere001_1"
+                geometry={nodes.Sphere001_1.geometry}
+                material={swordMaterial}
+                skeleton={nodes.Sphere001_1.skeleton}
+                castShadow
+                receiveShadow
+              />
+            </group>
           </group>
         </group>
-      </group>
-    </group>
+      </group >
+    </>
   )
 })
 

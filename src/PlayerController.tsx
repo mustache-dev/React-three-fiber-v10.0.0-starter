@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { Quaternion, Vector3, Group, Euler } from "three/webgpu"
 import { OrthographicCamera, useKeyboardControls } from "@react-three/drei"
 import { useRef, useEffect } from "react"
-import { useFrame } from "@react-three/fiber"
+import { useFrame, useThree } from "@react-three/fiber"
 import gsap from "gsap"
 import { useGameStore } from "./store"
 import { Caps } from "./Caps"
@@ -13,6 +13,7 @@ export const PlayerController = () => {
     const velocity = useRef(new Vector3())
     const cameraRef = useRef<THREE.OrthographicCamera>(null)
     const capsRef = useRef<CapsHandle>(null)
+    const scene = useThree((state) => state.scene)
 
     // Movement
     const speed = 6
@@ -29,6 +30,7 @@ export const PlayerController = () => {
     const isSpinAttacking = useGameStore((s) => s.isSpinAttacking)
     const spinAttackTriggered = useGameStore((s) => s.spinAttackTriggered)
     const clearSpinAttack = useGameStore((s) => s.clearSpinAttack)
+
 
     // Spin attack dash - slower with expo ease
     const spinAttackDash = (direction: Vector3, distance: number) => {
@@ -65,7 +67,7 @@ export const PlayerController = () => {
             x: target.x,
             y: target.y,
             z: target.z,
-            duration: 0.12,
+            duration: 0.2,
             ease: "power2.out",
             onComplete: () => {
                 isDashing.current = false

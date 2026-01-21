@@ -13,6 +13,8 @@ interface GameState {
     spinAttackTriggered: boolean
     triggerSpinAttack: () => void
     clearSpinAttack: () => void
+    target: Mesh | null
+    setTarget: (target: Mesh | null) => void
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -27,4 +29,6 @@ export const useGameStore = create<GameState>((set) => ({
     spinAttackTriggered: false,
     triggerSpinAttack: () => set({ spinAttackTriggered: true }),
     clearSpinAttack: () => set({ spinAttackTriggered: false }),
+    target: null,
+    setTarget: (target) => set({ target }),
 }))

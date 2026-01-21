@@ -9,6 +9,7 @@ import { EnemySystem } from './ecs/enemy'
 import { Floor } from './components/floor'
 import { HalfFloatType } from 'three'
 import { PlayerController } from './PlayerController'
+import { Particles } from './components/particles'
 
 function App() {
 
@@ -28,11 +29,12 @@ function App() {
         <Floor />
         <Lights />
         <PostProcessing />
+        <Particles />
         <KeyboardControls map={keyboardMap}>
           <PlayerController />
         </KeyboardControls>
         {/* ECS Enemy System - spawns and manages enemy entities */}
-        <EnemySystem initialCount={8} spawnRadius={6} />
+        {/* <EnemySystem initialCount={8} spawnRadius={6} /> */}
       </Canvas>
 
     </>

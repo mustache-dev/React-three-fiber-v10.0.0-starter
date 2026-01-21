@@ -53,6 +53,7 @@ export const PlayerController = () => {
         })
     }
 
+
     // Normal dash
     const dashTo = (direction: Vector3, distance: number) => {
         if (isDashing.current || !playerRef.current || dashDelay.current > 0) return
@@ -79,7 +80,7 @@ export const PlayerController = () => {
     const updateCamera = (delta: number) => {
         if (!playerRef.current || !cameraRef.current) return
         const { x, y, z } = playerRef.current.position
-        const targetPosition = new Vector3(x, y + 6, z + 10)
+        const targetPosition = new Vector3(x, y + 6, z + 5)
         cameraRef.current.position.lerp(targetPosition, 4 * delta)
     }
 
@@ -162,7 +163,7 @@ export const PlayerController = () => {
                 ref={cameraRef}
                 makeDefault
                 position={[10, 20, 0]}
-                rotation={[-Math.PI / 6, 0, 0]}
+                rotation={[-Math.PI / 4, 0, 0]}
                 zoom={80}
                 near={0.1}
                 far={60}

@@ -11,8 +11,8 @@ export const Floor = () => {
     const mat = new MeshStandardNodeMaterial()
     const n = texture(noise, uv())
 
-    const colorA = color('#3A3A3A')
-    const colorB = color('#2A2A2A')
+    const colorA = color('#3b3b3b')
+    const colorB = color('#272727')
 
     const scale = float(100)
     const scaledUv = uv().mul(scale)

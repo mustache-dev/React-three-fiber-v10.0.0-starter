@@ -8,6 +8,8 @@ import type { ThreeElements } from '@react-three/fiber'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { color, mix, uniform } from 'three/tsl'
 import { useGameStore } from './store'
+import { useVFXEmitter } from './components/VFXParticles/VFXEmitter'
+import { VFXEmitter } from './components/VFXParticles'
 
 // ============================================================================
 // Types
@@ -38,7 +40,7 @@ export type CapsHandle = {
 // Constants
 // ============================================================================
 
-const ATTACK_SPEED = 3
+const ATTACK_SPEED = 3.5
 const SPIN_ATTACK_SPEED = 1.5
 const CHARGE_TIME_MS = 500
 
@@ -53,6 +55,7 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const swordBoneRef = useRef<THREE.Bone | null>(null)
   const target = useRef<THREE.Mesh>(null)
   const setTarget = useGameStore((s) => s.setTarget)
+  const slashEmitterRef = useRef(null)
 
   // GLTF & Animations
   const { scene, animations } = useGLTF('/caps.glb')
@@ -64,6 +67,7 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const setIsCharging = useGameStore((s) => s.setIsCharging)
   const setSpinAttacking = useGameStore((s) => s.setSpinAttacking)
   const triggerSpinAttack = useGameStore((s) => s.triggerSpinAttack)
+
 
   // Animation state refs
   const state = useRef({
@@ -98,13 +102,20 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
 
     // Configure attack animations
     if (name === 'attack01' || name === 'attack02') {
+      if (group.current) {
+        // Get world position and rotation
+      }
       action.setLoop(THREE.LoopOnce, 1)
       action.setEffectiveTimeScale(ATTACK_SPEED)
       action.clampWhenFinished = true
       s.isAnimating = true
+      setTimeout(() => {
+        slashEmitterRef.current?.emit()
+      }, 100)
     }
 
     if (name === 'spin-attack') {
+
       action.setLoop(THREE.LoopOnce, 1)
       action.setEffectiveTimeScale(SPIN_ATTACK_SPEED)
       action.clampWhenFinished = true
@@ -279,7 +290,15 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
           <meshStandardMaterial color="red" visible={false} />
         </mesh>
       </group>
-
+      <VFXEmitter
+        name="slash"
+        ref={slashEmitterRef}
+        // autoStart={true}
+        autoStart={false}
+        localDirection={true}
+        delay={1}
+        direction={[[-1, -1], [0, 0], [0, 0]]}
+      />
       <group ref={group} {...props} dispose={null} scale={0.5} rotation={[0, Math.PI, 0]}>
         <group name="Scene">
           <group name="Armature">

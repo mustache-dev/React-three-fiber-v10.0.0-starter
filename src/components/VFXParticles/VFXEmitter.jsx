@@ -123,8 +123,8 @@ export const VFXEmitter = forwardRef(function VFXEmitter(
     return { position: emitPos, direction: emitDir }
   }, [localDirection, direction, position, transformDirectionByQuat])
 
-  // Emit function
-  const emit = useCallback(() => {
+  // Emit function - accepts optional runtime overrides
+  const emit = useCallback((runtimeOverrides = null) => {
     const particles = getParticleSystem()
     if (!particles?.spawn) {
       if (name) {
@@ -136,17 +136,31 @@ export const VFXEmitter = forwardRef(function VFXEmitter(
     const { position: emitPos, direction: emitDir } = getEmitParams()
     const [x, y, z] = emitPos
 
-    // Merge direction override with other overrides
-    const finalOverrides = emitDir ? { ...overrides, direction: emitDir } : overrides
+    // Transform runtime direction override by localDirection if enabled
+    let finalDir = emitDir
+    if (runtimeOverrides?.direction && localDirection && groupRef.current) {
+      groupRef.current.getWorldQuaternion(_worldQuat)
+      finalDir = transformDirectionByQuat(runtimeOverrides.direction, _worldQuat)
+    } else if (runtimeOverrides?.direction) {
+      finalDir = runtimeOverrides.direction
+    }
 
-    particles.spawn(x, y, z, emitCount, finalOverrides)
+    // Merge: component overrides -> direction (transformed) -> runtime overrides (without direction)
+    const { direction: _, ...runtimeOverridesWithoutDir } = runtimeOverrides || {}
+    const finalOverrides = {
+      ...overrides,
+      ...(finalDir && { direction: finalDir }),
+      ...runtimeOverridesWithoutDir
+    }
+
+    particles.spawn(x, y, z, runtimeOverrides?.count ?? emitCount, Object.keys(finalOverrides).length > 0 ? finalOverrides : null)
 
     if (onEmit) {
-      onEmit({ position: emitPos, count: emitCount, direction: emitDir })
+      onEmit({ position: emitPos, count: runtimeOverrides?.count ?? emitCount, direction: finalDir, overrides: finalOverrides })
     }
 
     return true
-  }, [getParticleSystem, getEmitParams, name, emitCount, overrides, onEmit])
+  }, [getParticleSystem, getEmitParams, name, emitCount, overrides, onEmit, localDirection, transformDirectionByQuat])
 
   // Auto-emission logic
   useFrame((_, delta) => {
@@ -186,24 +200,39 @@ export const VFXEmitter = forwardRef(function VFXEmitter(
 
   // Burst: emit once immediately, regardless of autoStart
   const burst = useCallback(
-    (count) => {
+    (count, runtimeOverrides = null) => {
       const particles = getParticleSystem()
       if (!particles?.spawn) return false
 
       const { position: emitPos, direction: emitDir } = getEmitParams()
       const [x, y, z] = emitPos
 
-      const finalOverrides = emitDir ? { ...overrides, direction: emitDir } : overrides
+      // Transform runtime direction override by localDirection if enabled
+      let finalDir = emitDir
+      if (runtimeOverrides?.direction && localDirection && groupRef.current) {
+        groupRef.current.getWorldQuaternion(_worldQuat)
+        finalDir = transformDirectionByQuat(runtimeOverrides.direction, _worldQuat)
+      } else if (runtimeOverrides?.direction) {
+        finalDir = runtimeOverrides.direction
+      }
 
-      particles.spawn(x, y, z, count ?? emitCount, finalOverrides)
+      // Merge: component overrides -> direction (transformed) -> runtime overrides (without direction)
+      const { direction: _, ...runtimeOverridesWithoutDir } = runtimeOverrides || {}
+      const finalOverrides = {
+        ...overrides,
+        ...(finalDir && { direction: finalDir }),
+        ...runtimeOverridesWithoutDir
+      }
+
+      particles.spawn(x, y, z, count ?? emitCount, Object.keys(finalOverrides).length > 0 ? finalOverrides : null)
 
       if (onEmit) {
-        onEmit({ position: emitPos, count: count ?? emitCount, direction: emitDir })
+        onEmit({ position: emitPos, count: count ?? emitCount, direction: finalDir, overrides: finalOverrides })
       }
 
       return true
     },
-    [getParticleSystem, getEmitParams, emitCount, overrides, onEmit]
+    [getParticleSystem, getEmitParams, emitCount, overrides, onEmit, localDirection, transformDirectionByQuat]
   )
 
   // Update emitting state when autoStart changes
@@ -219,9 +248,9 @@ export const VFXEmitter = forwardRef(function VFXEmitter(
   useImperativeHandle(
     ref,
     () => ({
-      /** Emit particles at current position */
+      /** Emit particles at current position. Accepts optional overrides: emit({ rotation, size, speed, ... }) */
       emit,
-      /** Burst emit - emit immediately regardless of autoStart */
+      /** Burst emit with count and optional overrides: burst(count, { rotation, size, ... }) */
       burst,
       /** Start auto-emission */
       start,

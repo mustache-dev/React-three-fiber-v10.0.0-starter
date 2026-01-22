@@ -14,7 +14,7 @@ export const Floor = () => {
     const colorA = color('#3b3b3b')
     const colorB = color('#272727')
 
-    const scale = float(100)
+    const scale = float(60)
     const scaledUv = uv().mul(scale)
 
     const cell = floor(scaledUv)

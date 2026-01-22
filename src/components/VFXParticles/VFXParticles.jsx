@@ -281,7 +281,7 @@ const toRotation3D = (value) => {
 export const VFXParticles = forwardRef(function VFXParticles(
   {
     name, // Optional name for registering with useVFXStore (enables VFXEmitter linking)
-    maxParticles = 10000,
+    maxParticles = 1000,
     size = [0.1, 0.3],
     colorStart = ["#ffffff"],
     colorEnd = null, // If null, uses colorStart (no color transition)

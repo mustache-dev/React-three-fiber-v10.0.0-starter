@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo, useState } from 'react'
+import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
 import { useFrame, useGraph } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { SkeletonUtils } from 'three-stdlib'
@@ -8,8 +8,8 @@ import type { ThreeElements } from '@react-three/fiber'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { color, mix, uniform } from 'three/tsl'
 import { useGameStore } from './store'
-import { useVFXEmitter } from './components/VFXParticles/VFXEmitter'
 import { VFXEmitter } from './components/VFXParticles'
+import { slashFlipX } from './components/particles/slash'
 
 // ============================================================================
 // Types
@@ -40,9 +40,10 @@ export type CapsHandle = {
 // Constants
 // ============================================================================
 
-const ATTACK_SPEED = 3.5
+const ATTACK_SPEED = 3
 const SPIN_ATTACK_SPEED = 1.5
-const CHARGE_TIME_MS = 500
+const CHARGE_DELAY_MS = 200  // Time before stance/charging starts
+const CHARGE_TIME_MS = 600   // Time to fully charge after stance starts
 
 // ============================================================================
 // Component
@@ -55,7 +56,8 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const swordBoneRef = useRef<THREE.Bone | null>(null)
   const target = useRef<THREE.Mesh>(null)
   const setTarget = useGameStore((s) => s.setTarget)
-  const slashEmitterRef = useRef(null)
+  const slashEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(null)
+  const sparkEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(null)
 
   // GLTF & Animations
   const { scene, animations } = useGLTF('/caps.glb')
@@ -67,97 +69,127 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const setIsCharging = useGameStore((s) => s.setIsCharging)
   const setSpinAttacking = useGameStore((s) => s.setSpinAttacking)
   const triggerSpinAttack = useGameStore((s) => s.triggerSpinAttack)
+  const triggerAttackDash = useGameStore((s) => s.triggerAttackDash)
 
 
-  // Animation state refs
+  // Animation state - simple and clear
   const state = useRef({
     currentAnimation: 'stance' as ActionName,
     nextAttack: 'attack01' as 'attack01' | 'attack02',
-    isAnimating: false,
+    isAttacking: false,
     isHolding: false,
-    isCharging: false,
     holdStartTime: 0,
     chargeProgress: 0,
-    queuedAttack: false, // Buffer next attack during animation
+    isInChargeStance: false,  // True once we've transitioned to stance for charging
   })
 
   // Glow uniform ref
   const glowUniformRef = useRef<ReturnType<typeof uniform<number>> | null>(null)
 
   // ---------------------------------------------------------------------------
-  // Animation
+  // Attack System
   // ---------------------------------------------------------------------------
 
-  const playAnimation = (name: ActionName, fadeIn = 0.1) => {
+  const executeAttack = (attackName: 'attack01' | 'attack02') => {
     const s = state.current
-    if (s.currentAnimation === name && name !== 'stance') return
-    if (s.isAnimating && name !== 'stance') return
-
-    // Fade out current
-    actions[s.currentAnimation]?.fadeOut(fadeIn)
-
-    // Play new animation
-    const action = actions[name]?.reset().fadeIn(fadeIn).play()
+    const action = actions[attackName]
     if (!action) return
 
-    // Configure attack animations
-    if (name === 'attack01' || name === 'attack02') {
-      if (group.current) {
-        // Get world position and rotation
-      }
-      action.setLoop(THREE.LoopOnce, 1)
-      action.setEffectiveTimeScale(ATTACK_SPEED)
-      action.clampWhenFinished = true
-      s.isAnimating = true
-      setTimeout(() => {
-        slashEmitterRef.current?.emit()
-      }, 100)
-    }
+    // Fade out current, play attack
+    actions[s.currentAnimation]?.fadeOut(0.1)
+    action.reset().fadeIn(0.1).play()
+    action.setLoop(THREE.LoopOnce, 1)
+    action.setEffectiveTimeScale(ATTACK_SPEED)
+    action.clampWhenFinished = true
 
-    if (name === 'spin-attack') {
+    s.isAttacking = true
+    s.currentAnimation = attackName
 
-      action.setLoop(THREE.LoopOnce, 1)
-      action.setEffectiveTimeScale(SPIN_ATTACK_SPEED)
-      action.clampWhenFinished = true
-      s.isAnimating = true
-      setSpinAttacking(true)
-    }
+    // Dash
+    triggerAttackDash(1.2, 0.15)
 
-    s.currentAnimation = name
+    // Slash VFX - direction based on attack type
+    slashFlipX.value = attackName === 'attack02' ? 0 : 1
+    // setTimeout(() => {
+    const direction = attackName === 'attack02' ? [[1, 1], [0, 0], [0, 0]] : [[-1, -1], [0, 0], [0, 0]]
+    slashEmitterRef.current?.emit({ direction })
+    // }, 100)
+
+    // Alternate next attack
+    s.nextAttack = attackName === 'attack01' ? 'attack02' : 'attack01'
   }
+
+  const executeSpinAttack = () => {
+    const s = state.current
+    const action = actions['spin-attack']
+    if (!action) return
+
+    actions[s.currentAnimation]?.fadeOut(0.1)
+    action.reset().fadeIn(0.1).play()
+    action.setLoop(THREE.LoopOnce, 1)
+    action.setEffectiveTimeScale(SPIN_ATTACK_SPEED)
+    action.clampWhenFinished = true
+
+    s.isAttacking = true
+    s.currentAnimation = 'spin-attack'
+    setSpinAttacking(true)
+    triggerSpinAttack()
+  }
+
+  const enterChargeStance = () => {
+    const s = state.current
+    if (s.isInChargeStance) return
+
+    actions[s.currentAnimation]?.fadeOut(0.1)
+    actions['stance']?.reset().fadeIn(0.1).play()
+    s.currentAnimation = 'stance'
+    s.isInChargeStance = true
+    setIsCharging(true)
+  }
+
+  const exitChargeStance = () => {
+    const s = state.current
+    s.isInChargeStance = false
+    s.chargeProgress = 0
+    setIsCharging(false)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Input Handlers
+  // ---------------------------------------------------------------------------
 
   const onMouseDown = () => {
     const s = state.current
+
+    // Ignore if already attacking
+    // if (s.isAttacking) return
+
     s.isHolding = true
     s.holdStartTime = Date.now()
-
-    if (!s.isAnimating) {
-      s.isCharging = true
-      setIsCharging(true)
-      playAnimation('stance', 0.1)
-    }
+    // Don't start charging yet - wait for CHARGE_DELAY_MS (handled in useFrame)
   }
 
   const onMouseUp = () => {
     const s = state.current
+
+    // Ignore if not holding or already attacking
     if (!s.isHolding) return
+    if (s.isAttacking) {
+      s.isHolding = false
+      exitChargeStance()
+      return
+    }
 
+    const wasInChargeStance = s.isInChargeStance
     s.isHolding = false
-    const wasCharging = s.isCharging
-    s.isCharging = false
-    setIsCharging(false)
+    exitChargeStance()
 
-    const holdDuration = Date.now() - s.holdStartTime
-    const isFullyCharged = holdDuration >= CHARGE_TIME_MS && wasCharging
-
-    if (isFullyCharged) {
-      triggerSpinAttack()
-      playAnimation('spin-attack', 0.1)
-    } else if (!s.isAnimating) {
-      playAnimation(s.nextAttack, 0.1)
-      s.nextAttack = s.nextAttack === 'attack01' ? 'attack02' : 'attack01'
+    // If we were charging and fully charged → spin attack
+    if (wasInChargeStance && s.chargeProgress >= 1) {
+      executeSpinAttack()
     } else {
-      s.queuedAttack = true
+      // Normal attack
+      executeAttack(s.nextAttack)
     }
   }
 
@@ -171,31 +203,16 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
       const attackAnimations: ActionName[] = ['attack01', 'attack02', 'spin-attack']
 
       if (attackAnimations.includes(finishedName)) {
-        const s = state.current
-        s.isAnimating = false
+        state.current.isAttacking = false
 
         if (finishedName === 'spin-attack') {
           setSpinAttacking(false)
+          // Only return to stance after spin attack
+          actions[state.current.currentAnimation]?.fadeOut(0.1)
+          actions['stance']?.reset().fadeIn(0.1).play()
+          state.current.currentAnimation = 'stance'
         }
-
-        if (s.queuedAttack) {
-          s.queuedAttack = false
-          setTimeout(() => {
-            if (!state.current.isAnimating) {
-              const nextAnim = state.current.nextAttack
-              state.current.nextAttack = nextAnim === 'attack01' ? 'attack02' : 'attack01'
-              actions[nextAnim]?.reset().fadeIn(0.1).play()
-              const action = actions[nextAnim]
-              if (action) {
-                action.setLoop(THREE.LoopOnce, 1)
-                action.setEffectiveTimeScale(ATTACK_SPEED)
-                action.clampWhenFinished = true
-                state.current.isAnimating = true
-                state.current.currentAnimation = nextAnim
-              }
-            }
-          }, 0)
-        }
+        // attack01/attack02 stay clamped at final frame
       }
     }
 
@@ -226,29 +243,34 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
 
     // Copy bone's world transform to swordRef2
     if (swordRef2.current && swordBoneRef.current && group.current) {
-      // Update entire hierarchy first
       group.current.updateMatrixWorld(true)
-
-      // Now get the bone's world position/rotation
-
-      const position = swordBoneRef.current.position.clone()
       const quaternion = swordBoneRef.current.quaternion.clone()
-
-      // swordRef2.current.position.copy(position)
       swordRef2.current.quaternion.copy(quaternion)
     }
 
-    if (s.isCharging && s.isHolding) {
-      // Charging: gradually ramp up glow
-      s.chargeProgress = Math.min(1, s.chargeProgress + (delta * 1000) / CHARGE_TIME_MS)
-      glowUniformRef.current.value = s.chargeProgress
-    } else if (s.isAnimating) {
+    // Charging logic
+    if (s.isHolding && !s.isAttacking) {
+      const holdDuration = Date.now() - s.holdStartTime
+
+      // After CHARGE_DELAY_MS, enter charge stance
+      if (holdDuration >= CHARGE_DELAY_MS && !s.isInChargeStance) {
+        enterChargeStance()
+      }
+
+      // Once in charge stance, ramp up charge progress
+      if (s.isInChargeStance) {
+        const chargeTime = holdDuration - CHARGE_DELAY_MS
+        s.chargeProgress = Math.min(1, chargeTime / CHARGE_TIME_MS)
+        glowUniformRef.current.value = s.chargeProgress
+      }
+    } else if (s.isAttacking) {
       // Attacking: instant full glow
       glowUniformRef.current.value = 1
-      s.chargeProgress = 0
+      const direction = s.nextAttack === 'attack02' ? [[1, 1], [-1, -1], [0, 0]] : [[-1, -1], [-1, -1], [0, 0]]
+      sparkEmitterRef.current?.emit({ direction: direction })
     } else {
+      // sparkEmitterRef.current?.stop()
       // Idle: fade out smoothly
-      s.chargeProgress = 0
       glowUniformRef.current.value = THREE.MathUtils.lerp(currentGlow, 0, delta * 12)
     }
   })
@@ -279,25 +301,39 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   }, [glowU])
 
   // ---------------------------------------------------------------------------
-  // Render
+  // Render-
   // ---------------------------------------------------------------------------
 
   return (
     <>
       <group ref={swordRef2}>
-        <mesh rotation={[0, Math.PI, 0]} ref={target} position={[0, -1.85, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh ref={target} position={[0, -1.85, 0]} rotation={[0, -Math.PI / 2, 0]}>
           <planeGeometry args={[0.5, 1.7]} />
           <meshStandardMaterial color="red" visible={false} />
+          <VFXEmitter
+            name="sparks"
+            ref={sparkEmitterRef}
+            autoStart={false}
+            position={[0, -.2, 0]}
+            // autoStart={false}
+            localDirection={true}
+            emitCount={1}
+          // delay={0.005}
+          // direction={[[1, 1], [-1, -1], [0, 0]]}
+          // startPosition={[[0, 0], [-1, 10], [0, 0]]}
+          />
         </mesh>
+
       </group>
       <VFXEmitter
         name="slash"
         ref={slashEmitterRef}
         // autoStart={true}
+        position={[0, 0, 0.6]}
         autoStart={false}
         localDirection={true}
         delay={1}
-        direction={[[-1, -1], [0, 0], [0, 0]]}
+        direction={[[1, 1], [0, 0], [0, 0]]}
       />
       <group ref={group} {...props} dispose={null} scale={0.5} rotation={[0, Math.PI, 0]}>
         <group name="Scene">

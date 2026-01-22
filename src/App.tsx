@@ -34,7 +34,7 @@ function App() {
           <PlayerController />
         </KeyboardControls>
         {/* ECS Enemy System - spawns and manages enemy entities */}
-        {/* <EnemySystem initialCount={8} spawnRadius={6} /> */}
+        <EnemySystem initialCount={8} spawnRadius={6} />
       </Canvas>
 
     </>

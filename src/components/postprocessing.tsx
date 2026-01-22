@@ -1,7 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
-import { pass, mrt, output, velocity, uniform, oneMinus, vec3, vec2, screenUV, length, smoothstep } from "three/tsl";
+import { pass, mrt, output, velocity, uniform, oneMinus, vec3, vec2, screenUV, length, smoothstep, float, clamp } from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
 import { smaa } from "three/examples/jsm/tsl/display/SMAANode.js";
 
@@ -39,10 +39,19 @@ export const PostProcessing = () => {
     // Gives a brighter, less blown-out result than additive
     const bloomResult = bloom(scenePassColor.mul(vignette), 0.15, 1, 0.) // strength, radius, threshold
     // bloomResult._nMips = 0; // secret sauce
+    const a = float(2.51);
+    const b = float(0.03);
+    const c = float(2.43);
+    const d = float(0.59);
+    const e = float(0.14);
+    const acesFilmic = clamp(
+      scenePassColor.mul(scenePassColor.mul(a).add(b))
+        .div(scenePassColor.mul(scenePassColor.mul(c).add(d)).add(e)),
+      0.0,
+      1.0)
+    const bloomPass = smaa(acesFilmic).add(bloomResult)
 
-    const bloomPass = scenePassColor.add(bloomResult)
-
-    const finalOutput = smaa(bloomPass)
+    const finalOutput = bloomPass
 
     const postProcessing = new THREE.PostProcessing(renderer);
     postProcessing.outputNode = finalOutput;

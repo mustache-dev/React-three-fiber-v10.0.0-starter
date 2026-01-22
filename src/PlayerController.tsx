@@ -7,6 +7,7 @@ import gsap from "gsap"
 import { useGameStore } from "./store"
 import { Caps } from "./Caps"
 import type { CapsHandle } from "./Caps"
+import { VFXEmitter } from './components/VFXParticles'
 
 export const PlayerController = () => {
     const playerRef = useRef<Group>(null)
@@ -14,6 +15,7 @@ export const PlayerController = () => {
     const cameraRef = useRef<THREE.OrthographicCamera>(null)
     const capsRef = useRef<CapsHandle>(null)
     const scene = useThree((state) => state.scene)
+
 
     // Movement
     const speed = 6
@@ -23,6 +25,8 @@ export const PlayerController = () => {
 
     // Keyboard
     const [, get] = useKeyboardControls()
+    const dodgeEmitterRef = useRef(null)
+    const dodgeSparksEmitterRef = useRef(null)
 
     // Store state
     const setPlayerPosition = useGameStore((s) => s.setPlayerPosition)
@@ -30,50 +34,97 @@ export const PlayerController = () => {
     const isSpinAttacking = useGameStore((s) => s.isSpinAttacking)
     const spinAttackTriggered = useGameStore((s) => s.spinAttackTriggered)
     const clearSpinAttack = useGameStore((s) => s.clearSpinAttack)
+    const attackDashTriggered = useGameStore((s) => s.attackDashTriggered)
+    const clearAttackDash = useGameStore((s) => s.clearAttackDash)
+    const isAttackDashing = useGameStore((s) => s.isAttackDashing)
+    const setAttackDashing = useGameStore((s) => s.setAttackDashing)
 
 
-    // Spin attack dash - slower with expo ease
-    const spinAttackDash = (direction: Vector3, distance: number) => {
+    // Core dash function - reusable and parameterizable
+    type DashConfig = {
+        direction?: Vector3  // defaults to player's forward direction
+        distance: number
+        duration: number
+        ease?: string        // defaults to "power2.out"
+        cooldown?: number    // if set, applies cooldown after dash
+        onStart?: () => void
+        onComplete?: () => void
+        skipIfDashing?: boolean // defaults to true
+        isDodge?: boolean
+    }
+
+    const dash = (config: DashConfig) => {
+        const {
+            direction,
+            distance,
+            duration,
+            ease = "power2.out",
+            cooldown,
+            onStart,
+            onComplete,
+            skipIfDashing = true,
+            isDodge = false,
+        } = config
+
         if (!playerRef.current) return
+        if (skipIfDashing && isDashing.current) return
+        if (cooldown !== undefined && dashDelay.current > 0) return
+        isDodge && dodgeEmitterRef.current?.start()
+        isDodge && dodgeSparksEmitterRef.current?.start()
+
+        const dir = direction ?? playerRef.current.getWorldDirection(new THREE.Vector3())
+        if (dir.length() === 0) return
 
         isDashing.current = true
+        onStart?.()
+
         const target = playerRef.current.position.clone().add(
-            direction.clone().normalize().multiplyScalar(distance)
+            dir.clone().normalize().multiplyScalar(distance)
         )
 
         gsap.to(playerRef.current.position, {
             x: target.x,
             y: target.y,
             z: target.z,
-            duration: 0.4,
-            ease: "power3.in",
+            duration,
+            ease,
             onComplete: () => {
                 isDashing.current = false
+                if (cooldown !== undefined) dashDelay.current = cooldown
+                dodgeEmitterRef.current?.stop()
+                dodgeSparksEmitterRef.current?.stop()
+                onComplete?.()
             }
         })
     }
 
+    // Specific dash presets using the core function
+    const spinAttackDash = (direction: Vector3, distance: number) => {
+        dash({
+            direction,
+            distance,
+            duration: 0.4,
+            ease: "power3.in",
+            skipIfDashing: false
+        })
+    }
 
-    // Normal dash
+    const attackDash = (distance: number, duration: number) => {
+        dash({
+            distance,
+            duration,
+            onStart: () => setAttackDashing(true),
+            onComplete: () => setAttackDashing(false)
+        })
+    }
+
     const dashTo = (direction: Vector3, distance: number) => {
-        if (isDashing.current || !playerRef.current || dashDelay.current > 0) return
-        if (direction.length() === 0) return
-
-        isDashing.current = true
-        const target = playerRef.current.position.clone().add(
-            direction.clone().normalize().multiplyScalar(distance)
-        )
-
-        gsap.to(playerRef.current.position, {
-            x: target.x,
-            y: target.y,
-            z: target.z,
+        dash({
+            direction,
+            distance,
             duration: 0.2,
-            ease: "power2.out",
-            onComplete: () => {
-                isDashing.current = false
-                dashDelay.current = 0.4
-            }
+            cooldown: 0.4,
+            isDodge: true
         })
     }
 
@@ -133,11 +184,12 @@ export const PlayerController = () => {
     useFrame(({ delta, pointer }) => {
         if (!playerRef.current || !cameraRef.current) return
 
-        // Speed multiplier: slow down when charging OR spin attacking
-        const shouldSlowDown = isCharging || isSpinAttacking
+        // Speed multiplier: slow down when charging, spin attacking, or attack dashing
+        const shouldSlowDown = isCharging || isSpinAttacking || isAttackDashing
         if (shouldSlowDown) {
-            // Smooth, gradual slowdown
-            speedMultiplier.current = THREE.MathUtils.lerp(speedMultiplier.current, 0, delta * 3)
+            // Smooth, gradual slowdown (instant for attack dash)
+            const lerpSpeed = isAttackDashing ? 20 : 3
+            speedMultiplier.current = THREE.MathUtils.lerp(speedMultiplier.current, 0, delta * lerpSpeed)
         } else {
             speedMultiplier.current = THREE.MathUtils.lerp(speedMultiplier.current, 1, delta * 6)
         }
@@ -147,6 +199,13 @@ export const PlayerController = () => {
             clearSpinAttack()
             const dashDir = playerRef.current.getWorldDirection(new THREE.Vector3())
             spinAttackDash(dashDir, 2)
+        }
+
+        // Trigger attack dash
+        if (attackDashTriggered) {
+            const { distance, duration } = attackDashTriggered
+            clearAttackDash()
+            attackDash(distance, duration)
         }
 
         updateCamera(delta)
@@ -171,6 +230,8 @@ export const PlayerController = () => {
 
             <group ref={playerRef}>
                 <Caps ref={capsRef} />
+                <VFXEmitter position={[0, 0.1, 0]} ref={dodgeEmitterRef} name="dodge" emitCount={1} autoStart={false} delay={0.0} />
+                <VFXEmitter position={[0, 0.1, 0]} localDirection={true} direction={[[0, 0], [0, 1], [-1, -1]]} ref={dodgeSparksEmitterRef} name="dodge-sparks" emitCount={1} autoStart={false} />
             </group>
         </>
     )

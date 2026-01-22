@@ -286,6 +286,8 @@ export const VFXParticles = forwardRef(function VFXParticles(
     colorStart = ["#ffffff"],
     colorEnd = null, // If null, uses colorStart (no color transition)
     fadeSize = [1, 0],
+    depthTest = true,
+    renderOrder = 0, // Higher values render on top of lower values (useful with depthTest=false)
     fadeSizeCurve = null, // Curve data { points: [...] } - controls fadeSize over lifetime (overrides fadeSize if set)
     fadeOpacity = [1, 0],
     fadeOpacityCurve = null, // Curve data { points: [...] } - controls fadeOpacity over lifetime (overrides fadeOpacity if set)
@@ -1419,6 +1421,8 @@ export const VFXParticles = forwardRef(function VFXParticles(
           mat = new THREE.MeshStandardNodeMaterial();
           break;
       }
+      mat.depthTest = depthTest;
+      mat.depthWrite = false;
       
       // Calculate effective velocity for stretch (uses velocity curve if enabled)
       // B channel of curveTexture contains velocity curve value
@@ -1644,15 +1648,17 @@ export const VFXParticles = forwardRef(function VFXParticles(
       mesh.frustumCulled = false;
       mesh.castShadow = activeShadow;
       mesh.receiveShadow = activeShadow;
+      mesh.renderOrder = renderOrder;
       return mesh;
     } else {
       // Sprite mode (default)
       const s = new THREE.Sprite(material);
       s.count = activeMaxParticles;
       s.frustumCulled = false;
+      s.renderOrder = renderOrder;
       return s;
     }
-  }, [material, activeMaxParticles, activeGeometry, activeShadow]);
+  }, [material, activeMaxParticles, activeGeometry, activeShadow, renderOrder]);
 
   // Initialize on mount
   useEffect(() => {

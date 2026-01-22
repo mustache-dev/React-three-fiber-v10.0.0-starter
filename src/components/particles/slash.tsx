@@ -35,7 +35,7 @@ export const Slash = () => {
         const dissolveNoise = texture(noiseTexture, vec2(uvX.mul(0.02), uv().y.mul(0.3)).add(progress.mul(0.05)).add(uvX.oneMinus()))
 
         const color1 = color('#ffa808').mul(20)
-        const glow = color('#8f9aff').mul(40)
+        const glow = color('#8f9aff').mul(30)
         const dissolveEdgeColor = color('#ffffff').mul(50) // Bright edge during dissolve
         const glowMix = smoothstep(0.8, 1, uv().y).mul(noise.r.mul(2.).pow(8.))
 
@@ -58,7 +58,7 @@ export const Slash = () => {
         const dissolveEdgeIntensity = float(1).sub(dissolveEdge).mul(dissolveProgress)
 
         const xOpacity = uvX
-        const opacity = uv().y.sub(vor.r.pow(4)).sub(uv().y.oneMinus())
+        const opacity = uv().y.sub(vor.r.pow(4)).sub(uv().y.oneMinus().mul(0.5))
         const finalOpacity = opacity.mul(smoothstep(0.35, 1, xOpacity.sub(noise.r.mul(0.4)))).mul(revealMask).mul(dissolveMask)
         const endFade = smoothstep(0.95, 1, uvX)
 
@@ -156,7 +156,7 @@ export const Slash = () => {
                         }
                     ]
                 }}
-                colorStart={["#FF711E", "#613DFF"]}
+                colorStart={["#FF711E", "#3d91ff"]}
                 fadeOpacity={[1, 0]}
                 gravity={[0, 0.3, 0]}
                 speed={[0, 3]}

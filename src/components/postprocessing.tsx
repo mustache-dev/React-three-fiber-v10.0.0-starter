@@ -1,7 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
-import { pass, mrt, output, velocity, uniform, oneMinus, vec3, vec2, screenUV, length, smoothstep, float, clamp } from "three/tsl";
+import { pass, mrt, output, velocity, uniform, oneMinus, vec3, vec2, screenUV, length, smoothstep, float, clamp, step } from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
 import { smaa } from "three/examples/jsm/tsl/display/SMAANode.js";
 
@@ -32,13 +32,15 @@ export const PostProcessing = () => {
     const center = vec2(0.5)
     const vignette = smoothstep(0., 0.5, oneMinus(length(screenUV.sub(center))).pow(2.))
 
-    const scenePassColor = scenePass.getTextureNode("output"); // Your scene's color
+    const scenePassColor = scenePass.getTextureNode("output").pow(1.2); // Your scene's color
     const scenePassVelocity = scenePass.getTextureNode("velocity"); // needed for GTAO, motionBlur or TRAA
 
     // Screen blend mode: 1 - (1 - base) * (1 - blend)
     // Gives a brighter, less blown-out result than additive
     const bloomResult = bloom(scenePassColor.mul(vignette), 0.15, 1, 0.) // strength, radius, threshold
     // bloomResult._nMips = 0; // secret sauce
+
+
     const a = float(2.51);
     const b = float(0.03);
     const c = float(2.43);

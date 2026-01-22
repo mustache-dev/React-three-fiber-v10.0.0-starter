@@ -1,10 +1,8 @@
 
 import { Canvas } from '@react-three/fiber'
-import { WobblySphere } from './components/wobblySphere'
 import { Lights } from './components/lights'
-import { KeyboardControls, OrbitControls } from '@react-three/drei'
+import { KeyboardControls } from '@react-three/drei'
 import { PostProcessing } from './components/postprocessing'
-import { WobblySphere2 } from './components/wobblySphere2'
 import { EnemySystem } from './ecs/enemy'
 import { Floor } from './components/floor'
 import { HalfFloatType } from 'three'
@@ -33,8 +31,9 @@ function App() {
         <KeyboardControls map={keyboardMap}>
           <PlayerController />
         </KeyboardControls>
+
         {/* ECS Enemy System - spawns and manages enemy entities */}
-        <EnemySystem initialCount={8} spawnRadius={6} />
+        <EnemySystem initialCount={10} spawnRadius={6} />
       </Canvas>
 
     </>

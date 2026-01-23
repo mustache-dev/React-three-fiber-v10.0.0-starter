@@ -1,7 +1,7 @@
 
 import { Canvas } from '@react-three/fiber'
 import { Lights } from './components/lights'
-import { KeyboardControls } from '@react-three/drei'
+import { KeyboardControls, OrbitControls } from '@react-three/drei'
 import { PostProcessing } from './components/postprocessing'
 import { EnemySystem } from './ecs/enemy'
 import { Floor } from './components/floor'
@@ -28,6 +28,7 @@ function App() {
         <Lights />
         <PostProcessing />
         <Particles />
+        {/* <OrbitControls /> */}
         <KeyboardControls map={keyboardMap}>
           <PlayerController />
         </KeyboardControls>

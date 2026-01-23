@@ -81,6 +81,7 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
 
   const { emit } = useVFXEmitter('impact')
   const { emit: emitFlare } = useVFXEmitter('impact-flare')
+  const { emit: emitSpawn } = useVFXEmitter('spawn')
 
   // Reactively subscribe to trait changes
   const position = useTrait(entity, Position)
@@ -111,7 +112,13 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
     if (isMelee) {
       actions['stance']?.reset().fadeIn(0.1).play()
     }
+
+
   }, [actions])
+
+  useEffect(() => {
+    emitSpawn([position.x, position.y, position.z], 6)
+  }, [])
 
   // Knockback state
   const isKnockedBack = useRef(false)

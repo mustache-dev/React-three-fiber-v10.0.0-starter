@@ -1,4 +1,3 @@
-import { useMemo } from "react"
 import { VFXParticles } from "../VFXParticles"
 import { CapsuleGeometry } from "three/webgpu"
 export const Dodge = () => {

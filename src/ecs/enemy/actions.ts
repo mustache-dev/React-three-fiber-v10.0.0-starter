@@ -1,7 +1,8 @@
 import { createActions } from 'koota'
 import {
   IsEnemy,
-  IsBasicEnemy,
+  IsMeleeEnemy,
+  IsRangeEnemy,
   Position,
   Velocity,
   TargetVelocity,
@@ -12,6 +13,9 @@ import {
   Color,
   MeshRef,
 } from './traits'
+import { eventBus, EVENTS } from '@/constants'
+
+export type EnemyType = 'melee' | 'range'
 
 /**
  * ACTIONS - Factory functions for creating/destroying enemies
@@ -27,11 +31,12 @@ export type SpawnEnemyOptions = {
   speed?: number
   color?: { r: number; g: number; b: number }
   scale?: number
+  type?: EnemyType
 }
 
 export const enemyActions = createActions((world) => ({
   /**
-   * Spawn a basic enemy with configurable options
+   * Spawn an enemy with configurable options
    */
   spawnEnemy: (options: SpawnEnemyOptions = {}) => {
     const {
@@ -41,12 +46,16 @@ export const enemyActions = createActions((world) => ({
       speed = 1,
       color = { r: 1, g: 0.2, b: 0.2 },
       scale = 1,
+      type = 'melee',
     } = options
+
+    // Choose type tag based on enemy type
+    const typeTag = type === 'melee' ? IsMeleeEnemy : IsRangeEnemy
 
     const entity = world.spawn(
       // Tags
       IsEnemy,
-      IsBasicEnemy,
+      typeTag,
       // Transform
       Position(position),
       Velocity(velocity),
@@ -65,22 +74,25 @@ export const enemyActions = createActions((world) => ({
   },
 
   /**
-   * Spawn multiple enemies in a pattern
+   * Spawn multiple enemies in a pattern with random types
    */
   spawnEnemyWave: (count: number, radius: number = 5) => {
     const entities = []
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2
+      const type: EnemyType = Math.random() > 0.5 ? 'melee' : 'range'
+      const typeTag = type === 'melee' ? IsMeleeEnemy : IsRangeEnemy
+
       const entity = world.spawn(
         IsEnemy,
-        IsBasicEnemy,
+        typeTag,
         Position({
           x: Math.cos(angle) * radius,
           y: 0,
           z: Math.sin(angle) * radius,
         }),
         Velocity({ x: 0, y: 0, z: 0 }),
-        TargetVelocity({ x: 0, y: 0, z: 0 }), // Smooth steering target
+        TargetVelocity({ x: 0, y: 0, z: 0 }),
         Rotation({ x: 0, y: 0, z: 0 }),
         Scale({ x: 1, y: 1, z: 1 }),
         Health({ current: 100, max: 100 }),
@@ -124,6 +136,7 @@ export const enemyActions = createActions((world) => ({
 
     if (newHealth <= 0) {
       entity.destroy()
+      eventBus.emit(EVENTS.ENEMY_DEAD)
     }
   },
 }))

@@ -43,8 +43,8 @@ export const Impact = () => {
                 orientToDirection={true}
                 orientAxis="y"
                 stretchBySpeed={{
-                    factor: 2,
-                    maxStretch: 5
+                    factor: 5,
+                    maxStretch: 10
                 }}
                 appearance="default"
                 blending={1}

@@ -14,12 +14,13 @@ export const Healthbar = ({ position, health, healthMax }: { position: [number, 
         gsap.killTweensOf(lerpRef.current)
 
         gsap.to(lerpRef.current, {
-            scaleX: healthRatio, // GPU-accelerated, supports sub-pixel
+            scaleX: healthRatio,
             duration: Math.random(),
             delay: Math.random() * .2,
             ease: "power4.out",
         })
     }, [healthRatio])
+
 
     return (
         <Html
@@ -29,7 +30,8 @@ export const Healthbar = ({ position, health, healthMax }: { position: [number, 
             style={{
                 pointerEvents: 'none',
                 width: '40px',
-                height: '4px'
+                height: '4px',
+                opacity: health !== healthMax ? 1 : 0
             }}
         >
             <div className="container">

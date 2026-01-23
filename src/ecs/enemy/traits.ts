@@ -14,8 +14,11 @@ import * as THREE from 'three'
 /** Tag to identify an entity as an enemy */
 export const IsEnemy = trait()
 
-/** Optional: Tag for specific enemy types (expand later) */
-export const IsBasicEnemy = trait()
+/** Enemy type: melee (sword arm visible) */
+export const IsMeleeEnemy = trait()
+
+/** Enemy type: ranged (canon visible) */
+export const IsRangeEnemy = trait()
 
 // ============================================
 // TRANSFORM TRAITS

@@ -12,7 +12,8 @@
 export {
   // Identity
   IsEnemy,
-  IsBasicEnemy,
+  IsMeleeEnemy,
+  IsRangeEnemy,
   // Transform
   Position,
   Velocity,
@@ -30,7 +31,7 @@ export {
 
 // Actions (entity factories)
 export { enemyActions } from './actions'
-export type { SpawnEnemyOptions } from './actions'
+export type { SpawnEnemyOptions, EnemyType } from './actions'
 
 // Systems (update logic)
 export {
@@ -47,6 +48,6 @@ export {
 export {
   EnemyMesh,
   EnemyManager,
-  EnemySpawner,
+  WaveSpawner,
   EnemySystem,
 } from './Enemy'

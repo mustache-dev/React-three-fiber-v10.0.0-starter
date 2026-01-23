@@ -17,6 +17,7 @@ import {
   PARRY_DURATION_MS,
   PARRY_COOLDOWN_MS
 } from './types'
+import { eventBus, EVENTS } from '../constants'
 
 const PARRY_SPEED = 2
 const ATTACK_DAMAGE = 30
@@ -245,6 +246,7 @@ export const useCapsController = ({
       if (attackAnimations.includes(finishedName)) {
         state.current.isAttacking = false
         hitEntitiesRef.current.clear() // Clear hit tracking for next attack
+        eventBus.emit(EVENTS.ATTACK_END) // Notify attack ended (for camera shake reset)
 
         // Spin attack and dash attack return to stance after finishing
         if (finishedName === Animations.SPIN_ATTACK) {

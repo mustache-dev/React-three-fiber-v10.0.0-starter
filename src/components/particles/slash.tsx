@@ -18,7 +18,7 @@ type GLTFResult = ReturnType<typeof useGLTF> & {
     nodes: { Cylinder: { geometry: THREE.BufferGeometry } }
 }
 
-// Exported uniform - set to 1 for right slash, 0 for left slash
+
 export const slashFlipX = uniform(0)
 
 export const Slash = () => {

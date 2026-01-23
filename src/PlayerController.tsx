@@ -9,6 +9,7 @@ import { Caps } from "./caps/index"
 import type { CapsHandle } from "./caps/index"
 import { VFXEmitter } from './components/VFXParticles'
 import { resolvePosition, useCollisionStore, Layer } from './collision'
+import { eventBus, EVENTS } from './constants'
 
 const PLAYER_RADIUS = 0.4
 const PLAYER_ID = 'player'
@@ -61,6 +62,47 @@ export const PlayerController = () => {
     const clearAttackDash = useGameStore((s) => s.clearAttackDash)
     const isAttackDashing = useGameStore((s) => s.isAttackDashing)
     const setAttackDashing = useGameStore((s) => s.setAttackDashing)
+
+    // Camera shake - subtle rotation on hit (once per slash)
+    const baseRotation = useRef({ x: -Math.PI / 4, y: 0 })
+    const hasShakenThisAttack = useRef(false)
+
+    const cameraShake = () => {
+        if (!cameraRef.current || hasShakenThisAttack.current) return
+        hasShakenThisAttack.current = true
+
+        const intensity = 0.03
+        const rx = (Math.random() - 0.5) * intensity
+        const ry = (Math.random() - 0.5) * intensity
+
+        gsap.to(cameraRef.current.rotation, {
+            x: baseRotation.current.x + rx,
+            y: baseRotation.current.y + ry,
+            duration: 0.03,
+            ease: "power2.out"
+        })
+    }
+
+    const resetCameraRotation = () => {
+        if (!cameraRef.current) return
+        hasShakenThisAttack.current = false
+        gsap.to(cameraRef.current.rotation, {
+            x: baseRotation.current.x,
+            y: baseRotation.current.y,
+            duration: 0.03,
+            ease: "power2.out"
+        })
+    }
+
+    // Listen to camera shake events
+    useEffect(() => {
+        eventBus.on(EVENTS.CAMERA_SHAKE, cameraShake)
+        eventBus.on(EVENTS.ATTACK_END, resetCameraRotation)
+        return () => {
+            eventBus.off(EVENTS.CAMERA_SHAKE, cameraShake)
+            eventBus.off(EVENTS.ATTACK_END, resetCameraRotation)
+        }
+    }, [])
 
 
     // Core dash function - reusable and parameterizable
@@ -171,7 +213,7 @@ export const PlayerController = () => {
     const updatePlayerPosition = (delta: number) => {
         if (!playerRef.current || isDashing.current) return
         const effectiveSpeed = speed * speedMultiplier.current
-        
+
         const currentPos = playerRef.current.position
         const movement = velocity.current.clone().multiplyScalar(delta * effectiveSpeed)
         const targetX = currentPos.x + movement.x
@@ -179,17 +221,17 @@ export const PlayerController = () => {
 
         // Resolve solid collisions using the store
         const resolved = resolvePosition(
-            currentPos.x, 
-            currentPos.z, 
-            targetX, 
-            targetZ, 
-            PLAYER_RADIUS, 
+            currentPos.x,
+            currentPos.z,
+            targetX,
+            targetZ,
+            PLAYER_RADIUS,
             PLAYER_ID
         )
-        
+
         playerRef.current.position.x = resolved.x
         playerRef.current.position.z = resolved.z
-        
+
         // Update our collider position in the store
         updateCollider(PLAYER_ID, resolved.x, resolved.z)
     }
@@ -251,7 +293,7 @@ export const PlayerController = () => {
         if (spinAttackTriggered) {
             clearSpinAttack()
             const dashDir = playerRef.current.getWorldDirection(new THREE.Vector3())
-            spinAttackDash(dashDir, 2)
+            spinAttackDash(dashDir, 6)
         }
 
         // Trigger dash attack dash (like spin attack)

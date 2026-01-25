@@ -9,6 +9,7 @@ import { VFXEmitter } from '../components/VFXParticles'
 import type { GLTFResult, CapsHandle } from './types'
 import { createCapsMaterial, createSwordMaterial } from './materials'
 import { useCapsController } from './useCapsController'
+import { Energy } from '@/components/particles/energy'
 
 // Debug flag for hitbox visualization
 const DEBUG_HITBOX = false
@@ -19,8 +20,13 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const swordRef = useRef<THREE.SkinnedMesh>(null)
   const swordRef2 = useRef<THREE.Group>(null)
   const target = useRef<THREE.Mesh>(null)
-  const slashEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(null)
-  const sparkEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(null)
+  const slashEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(
+    null
+  )
+  const sparkEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(
+    null
+  )
+
 
   // Store
   const setTarget = useGameStore((s) => s.setTarget)
@@ -44,7 +50,7 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     swordRef2,
     group,
     slashEmitterRef,
-    sparkEmitterRef
+    sparkEmitterRef,
   })
 
   // Update sword hitbox world transform in store (for hit detection)
@@ -60,7 +66,11 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     }
   })
 
-  useImperativeHandle(ref, () => ({ onMouseDown, onMouseUp, onRightClick }), [onMouseDown, onMouseUp, onRightClick])
+  useImperativeHandle(ref, () => ({ onMouseDown, onMouseUp, onRightClick }), [
+    onMouseDown,
+    onMouseUp,
+    onRightClick,
+  ])
 
   useEffect(() => {
     setTarget(target.current)
@@ -86,10 +96,11 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
             name="sparks"
             ref={sparkEmitterRef}
             autoStart={false}
-            position={[0, -.2, 0]}
+            position={[0, -0.2, 0]}
             localDirection={true}
             emitCount={1}
           />
+          <Energy />
           {/* Debug hitbox circle - radius = 1.7 * 0.6 ≈ 1.02 (matches hit detection) */}
           {DEBUG_HITBOX && (
             <mesh rotation={[0, 0, 0]}>
@@ -102,7 +113,6 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
               />
             </mesh>
           )}
-
         </mesh>
       </group>
 
@@ -113,7 +123,11 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
         autoStart={false}
         localDirection={true}
         delay={1}
-        direction={[[1, 1], [0, 0], [0, 0]]}
+        direction={[
+          [1, 1],
+          [0, 0],
+          [0, 0],
+        ]}
       />
 
       <group ref={group} {...props} dispose={null} scale={0.5} rotation={[0, Math.PI, 0]}>

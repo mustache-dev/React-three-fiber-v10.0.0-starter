@@ -10,6 +10,7 @@ import type { CapsHandle } from "./caps/index"
 import { VFXEmitter } from './components/VFXParticles'
 import { resolvePosition, useCollisionStore, Layer } from './collision'
 import { eventBus, EVENTS } from './constants'
+import { me } from 'playroomkit'
 
 const PLAYER_RADIUS = 0.4
 const PLAYER_ID = 'player'
@@ -275,6 +276,14 @@ export const PlayerController = () => {
         }
     }, [])
 
+    const updatePlayroomState = () => {
+        if (me()) {
+            // console.log(me())
+            me().setState('position', playerRef.current?.getWorldPosition(new Vector3()))
+            me().setState('quaternion', playerRef.current.getWorldQuaternion(new Quaternion()))
+        }
+    }
+
     // Game loop
     useFrame(({ delta, pointer }) => {
         if (!playerRef.current || !cameraRef.current) return
@@ -315,8 +324,11 @@ export const PlayerController = () => {
         updatePlayerPosition(delta)
         updatePlayerRotation(delta, pointer)
         setPlayerPosition(playerRef.current.position)
+        updatePlayroomState()
         dashDelay.current -= delta
     })
+
+
 
     return (
         <>

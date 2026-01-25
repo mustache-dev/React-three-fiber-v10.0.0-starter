@@ -12,6 +12,7 @@ import {
   Speed,
   Color,
   MeshRef,
+  isSpawned,
 } from './traits'
 import { eventBus, EVENTS } from '@/constants'
 
@@ -19,7 +20,7 @@ export type EnemyType = 'melee' | 'range'
 
 /**
  * ACTIONS - Factory functions for creating/destroying enemies
- * 
+ *
  * Actions are bound to the world and provide a clean API
  * for spawning and managing entities.
  */
@@ -65,9 +66,10 @@ export const enemyActions = createActions((world) => ({
       // Gameplay
       Health({ current: health, max: health }),
       Speed({ value: speed }),
+      isSpawned({ value: false }),
       // Visuals
       Color(color),
-      MeshRef,
+      MeshRef
     )
 
     return entity
@@ -98,7 +100,7 @@ export const enemyActions = createActions((world) => ({
         Health({ current: 100, max: 100 }),
         Speed({ value: 1 }),
         Color({ r: 1, g: 0.2, b: 0.2 }),
-        MeshRef,
+        MeshRef
       )
       entities.push(entity)
     }
@@ -131,12 +133,13 @@ export const enemyActions = createActions((world) => ({
 
     const health = entity.get(Health)!
     const newHealth = Math.max(0, health.current - amount)
-    
+
     entity.set(Health, { current: newHealth, max: health.max })
+    const meshRef = entity.get(MeshRef)!
 
     if (newHealth <= 0) {
       entity.destroy()
-      eventBus.emit(EVENTS.ENEMY_DEAD)
+      eventBus.emit(EVENTS.ENEMY_DEAD, meshRef?.current?.position)
     }
   },
 }))

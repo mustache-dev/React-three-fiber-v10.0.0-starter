@@ -7,7 +7,17 @@ import type { Entity } from 'koota'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { SkeletonUtils } from 'three-stdlib'
 
-import { IsEnemy, IsMeleeEnemy, IsRangeEnemy, Position, Color, Scale, MeshRef, Health } from './traits'
+import {
+  IsEnemy,
+  IsMeleeEnemy,
+  IsRangeEnemy,
+  Position,
+  Color,
+  Scale,
+  MeshRef,
+  Health,
+  isSpawned,
+} from './traits'
 import { enemyActions } from './actions'
 import { updateEnemySystems } from './systems'
 import { Healthbar } from '@/components/hud/healthbar'
@@ -95,6 +105,7 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
 
   // Create material with its own hit uniform (per-instance)
   const hitUniformRef = useRef<{ value: number } | null>(null)
+  const opacityUniformRef = useRef<{ value: number } | null>(null)
   const materialData = useMemo(() => {
     if (!color) return null
     return createEnemyCapsMaterial(color)
@@ -104,6 +115,24 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
   useEffect(() => {
     if (materialData) {
       hitUniformRef.current = materialData.hitUniform
+      opacityUniformRef.current = materialData.opacityUniform
+      // gsap.to(opacityUniformRef.current, {
+      //   value: 1,
+      //   duration: 1,
+      //   ease: 'power2.in',
+      //   delay: 1,
+      // })
+      // gsap.to(groupRef.current.position, {
+      //   y: 0,
+      //   duration: 0.5,
+      //   ease: 'power2.in',
+      //   delay: 2.2,
+      //   onComplete: () => {
+      //     emitSpawn(groupRef.current.position, 10)
+      //     entity.set(isSpawned, { value: true })
+      //   },
+      // })
+      emitSpawn(groupRef.current.position, 10)
     }
   }, [materialData])
 
@@ -112,13 +141,7 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
     if (isMelee) {
       actions['stance']?.reset().fadeIn(0.1).play()
     }
-
-
   }, [actions])
-
-  useEffect(() => {
-    emitSpawn([position.x, position.y, position.z], 6)
-  }, [])
 
   // Knockback state
   const isKnockedBack = useRef(false)
@@ -128,98 +151,98 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
   const colliderId = `enemy-${entity.id()}`
 
   // Knockback function - pushes enemy in a direction
-  const knockback = useCallback((config: KnockbackConfig) => {
-    const {
-      direction,
-      distance,
-      duration,
-      ease = "power2.out",
-    } = config
+  const knockback = useCallback(
+    (config: KnockbackConfig) => {
+      const { direction, distance, duration, ease = 'power2.out' } = config
 
-    if (!entity.has(Position)) return
+      if (!entity.has(Position)) return
 
-    // Kill any existing knockback tween
-    if (knockbackTween.current) {
-      knockbackTween.current.kill()
-    }
-
-    isKnockedBack.current = true
-
-    const currentPos = entity.get(Position)!
-    const normalizedDir = direction.clone().normalize()
-
-    const targetX = currentPos.x + normalizedDir.x * distance
-    const targetZ = currentPos.z + normalizedDir.z * distance
-
-    // Animate position using gsap
-    const animTarget = { x: currentPos.x, z: currentPos.z }
-
-    knockbackTween.current = gsap.to(animTarget, {
-      x: targetX,
-      z: targetZ,
-      duration,
-      ease,
-      onUpdate: () => {
-        if (entity.has(Position)) {
-          entity.set(Position, {
-            x: animTarget.x,
-            y: currentPos.y,
-            z: animTarget.z
-          })
-        }
-      },
-      onComplete: () => {
-        isKnockedBack.current = false
-        knockbackTween.current = null
+      // Kill any existing knockback tween
+      if (knockbackTween.current) {
+        knockbackTween.current.kill()
       }
-    })
-  }, [entity])
+
+      isKnockedBack.current = true
+
+      const currentPos = entity.get(Position)!
+      const normalizedDir = direction.clone().normalize()
+
+      const targetX = currentPos.x + normalizedDir.x * distance
+      const targetZ = currentPos.z + normalizedDir.z * distance
+
+      // Animate position using gsap
+      const animTarget = { x: currentPos.x, z: currentPos.z }
+
+      knockbackTween.current = gsap.to(animTarget, {
+        x: targetX,
+        z: targetZ,
+        duration,
+        ease,
+        onUpdate: () => {
+          if (entity.has(Position)) {
+            entity.set(Position, {
+              x: animTarget.x,
+              y: currentPos.y,
+              z: animTarget.z,
+            })
+          }
+        },
+        onComplete: () => {
+          isKnockedBack.current = false
+          knockbackTween.current = null
+        },
+      })
+    },
+    [entity]
+  )
 
   // Get player position for knockback direction
-  const playerPosition = useGameStore((s) => s.playerPosition)
 
   // Handle hit from player sword
-  const onHit = useCallback((_attackerId: string, damage: number, hitPosition: HitPosition) => {
-    console.log(`🗡️ Enemy ${entity.id()} hit for ${damage} damage at`, hitPosition)
-    const { x, y, z } = hitPosition
-    damageEnemy(entity, damage)
-    console.log(emit, hitPosition)
-    emit([x, y, z], 30)
-    emitFlare([x, y, z], 10)
+  const onHit = useCallback(
+    (_attackerId: string, damage: number, hitPosition: HitPosition) => {
+      console.log(`🗡️ Enemy ${entity.id()} hit for ${damage} damage at`, hitPosition)
+      const { x, y, z } = hitPosition
+      damageEnemy(entity, damage + Math.floor(Math.random() * 20))
+      console.log(emit, hitPosition)
+      emit([x, y, z], 30)
+      emitFlare([x, y, z], 10)
 
-    // Trigger hit effect on this enemy's material only
-    if (hitUniformRef.current) {
-      hitUniformRef.current.value = 1
-    }
-
-    // Trigger camera shake (once per slash, handled in PlayerController)
-    eventBus.emit(EVENTS.CAMERA_SHAKE)
-
-    // Calculate knockback direction: from attacker (player) toward enemy
-    if (entity.has(Position)) {
-      const enemyPos = entity.get(Position)!
-      const knockbackDir = new THREE.Vector3(
-        enemyPos.x - playerPosition.x,
-        0,
-        enemyPos.z - playerPosition.z
-      )
-
-      // If positions are the same, use a random direction
-      if (knockbackDir.length() < 0.001) {
-        knockbackDir.set(Math.random() - 0.5, 0, Math.random() - 0.5)
+      // Trigger hit effect on this enemy's material only
+      if (hitUniformRef.current) {
+        hitUniformRef.current.value = 1
       }
-      const ko = actions['knockback']?.reset().fadeIn(0.1).play()
-      ko?.setEffectiveTimeScale(1.3)
-      ko?.setLoop(THREE.LoopOnce, 1)
-      // Apply knockback - push enemy away from the attacker
-      knockback({
-        direction: knockbackDir,
-        distance: 1.5,
-        duration: 0.2,
-        ease: "power2.out"
-      })
-    }
-  }, [entity, damageEnemy, emit, emitFlare, knockback, playerPosition, actions])
+
+      // Trigger camera shake (once per slash, handled in PlayerController)
+      eventBus.emit(EVENTS.CAMERA_SHAKE)
+      const playerPosition = useGameStore.getState().playerPosition
+      // Calculate knockback direction: from attacker (player) toward enemy
+      if (entity.has(Position)) {
+        const enemyPos = entity.get(Position)!
+        const knockbackDir = new THREE.Vector3(
+          enemyPos.x - playerPosition.x,
+          0,
+          enemyPos.z - playerPosition.z
+        )
+
+        // If positions are the same, use a random direction
+        if (knockbackDir.length() < 0.001) {
+          knockbackDir.set(Math.random() - 0.5, 0, Math.random() - 0.5)
+        }
+        const ko = actions['knockback']?.reset().fadeIn(0.1).play()
+        ko?.setEffectiveTimeScale(1.3)
+        ko?.setLoop(THREE.LoopOnce, 1)
+        // Apply knockback - push enemy away from the attacker
+        knockback({
+          direction: knockbackDir,
+          distance: 1.5,
+          duration: 0.2,
+          ease: 'power2.out',
+        })
+      }
+    },
+    [entity, damageEnemy, emit, emitFlare, knockback, actions]
+  )
 
   // Register collider with collision system
   useEffect(() => {
@@ -232,7 +255,7 @@ export function EnemyMesh({ entity }: EnemyMeshProps) {
       radius: ENEMY_COLLISION_RADIUS,
       solid: true,
       layer: Layer.ENEMY,
-      onHit
+      onHit,
     })
 
     return () => unregisterCollider(colliderId)

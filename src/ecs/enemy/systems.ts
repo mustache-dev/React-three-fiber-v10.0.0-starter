@@ -1,5 +1,14 @@
 import type { World } from 'koota'
-import { IsEnemy, Position, Velocity, Speed, MeshRef, Rotation, TargetVelocity } from './traits'
+import {
+  IsEnemy,
+  Position,
+  Velocity,
+  Speed,
+  MeshRef,
+  Rotation,
+  TargetVelocity,
+  isSpawned,
+} from './traits'
 import { damp } from 'three/src/math/MathUtils.js'
 
 /** Damping factor for velocity smoothing (higher = snappier, lower = smoother) */
@@ -7,7 +16,7 @@ const VELOCITY_SMOOTHING = 3
 
 /**
  * SYSTEMS - Update logic that runs each frame
- * 
+ *
  * Systems query for entities with specific traits and update them.
  * Call these in useFrame() or a game loop.
  */
@@ -16,13 +25,11 @@ const VELOCITY_SMOOTHING = 3
  * Updates enemy positions based on velocity
  */
 export function movementSystem(world: World, delta: number) {
-  world.query(IsEnemy, Position, Velocity, Speed).updateEach(
-    ([pos, vel, speed]) => {
-      pos.x += vel.x * speed.value * delta
-      pos.y += vel.y * speed.value * delta
-      pos.z += vel.z * speed.value * delta
-    }
-  )
+  world.query(IsEnemy, Position, Velocity, Speed).updateEach(([pos, vel, speed]) => {
+    pos.x += vel.x * speed.value * delta
+    pos.y += vel.y * speed.value * delta
+    pos.z += vel.z * speed.value * delta
+  })
 }
 
 /**
@@ -34,7 +41,7 @@ export function syncMeshSystem(world: World) {
     const pos = entity.get(Position)!
     const rot = entity.get(Rotation)!
     const meshRef = entity.get(MeshRef)!
-    
+
     if (meshRef.current) {
       meshRef.current.position.set(pos.x, pos.y, pos.z)
       meshRef.current.rotation.set(rot.x, rot.y, rot.z)
@@ -47,13 +54,12 @@ export function syncMeshSystem(world: World) {
  */
 export function wanderSystem(world: World) {
   world.query(IsEnemy, TargetVelocity).updateEach(([targetVel]) => {
-    // Randomly pick a new target direction occasionally
-    if (Math.random() < 0.02) { // 2% chance per frame to change direction
+    if (Math.random() < 0.02) {
       const angle = Math.random() * Math.PI * 2
-      const speed = 0.5 + Math.random() * 0.5 // Random speed between 0.5-1.0
-      
+      const speed = 0.5 + Math.random() * 0.5
+
       targetVel.x = Math.cos(angle) * speed
-      targetVel.y = 0 // Keep on ground plane
+      targetVel.y = 0
       targetVel.z = Math.sin(angle) * speed
     }
   })

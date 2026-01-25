@@ -11,7 +11,7 @@ export const Spawn = () => {
                 maxParticles={1000}
                 position={[0, 0, 0]}
                 emitCount={6}
-                delay={2}
+                // delay={2}
                 size={[0.08, 0.47]}
                 fadeSize={[0.2, 1]}
                 colorStart={["#ffffff", "#a4a4a4", "#323232"]}
@@ -35,7 +35,7 @@ export const Spawn = () => {
                 }}
                 gravity={[0, 0, 0]}
                 speed={[0.35, 1.43]}
-                lifetime={[2.44, 2.44]}
+                lifetime={1}
                 velocityCurve={{
                     points: [
                         {

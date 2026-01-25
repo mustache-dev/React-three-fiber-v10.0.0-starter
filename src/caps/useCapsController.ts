@@ -15,12 +15,13 @@ import {
   CHARGE_DELAY_MS,
   CHARGE_TIME_MS,
   PARRY_DURATION_MS,
-  PARRY_COOLDOWN_MS
+  PARRY_COOLDOWN_MS,
 } from './types'
 import { eventBus, EVENTS } from '../constants'
+import { useVFXEmitter } from '@/components/VFXParticles/VFXEmitter'
 
 const PARRY_SPEED = 2
-const ATTACK_DAMAGE = 30
+const ATTACK_DAMAGE = 10
 const SPIN_ATTACK_DAMAGE = 100
 
 type UseCapsControllerProps = {
@@ -40,20 +41,23 @@ export const useCapsController = ({
   swordRef2,
   group,
   slashEmitterRef,
-  sparkEmitterRef
+  sparkEmitterRef,
 }: UseCapsControllerProps) => {
   const swordBoneRef = useRef<THREE.Bone | null>(null)
   const hitEntitiesRef = useRef<Set<string>>(new Set()) // Track entities hit during current attack
 
+  const { start, stop } = useVFXEmitter('energy')
   // Store actions
+  // Actions / setters (keep as selectors)
   const setIsCharging = useGameStore((s) => s.setIsCharging)
-  const swordHitbox = useGameStore((s) => s.swordHitbox)
   const setSpinAttacking = useGameStore((s) => s.setSpinAttacking)
   const setParrying = useGameStore((s) => s.setParrying)
-  const isDashing = useGameStore((s) => s.isDashing)
   const triggerSpinAttack = useGameStore((s) => s.triggerSpinAttack)
   const triggerDashAttack = useGameStore((s) => s.triggerDashAttack)
   const triggerAttackDash = useGameStore((s) => s.triggerAttackDash)
+  
+
+
 
   // Animation state
   const state = useRef<AnimationState>({
@@ -93,7 +97,18 @@ export const useCapsController = ({
 
     // Slash VFX - direction based on attack type
     slashFlipX.value = attackName === Animations.ATTACK_02 ? 0 : 1
-    const direction = attackName === Animations.ATTACK_02 ? [[1, 1], [0, 0], [0, 0]] : [[-1, -1], [0, 0], [0, 0]]
+    const direction =
+      attackName === Animations.ATTACK_02
+        ? [
+            [1, 1],
+            [0, 0],
+            [0, 0],
+          ]
+        : [
+            [-1, -1],
+            [0, 0],
+            [0, 0],
+          ]
     slashEmitterRef.current?.emit({ direction })
 
     // Alternate next attack
@@ -130,19 +145,25 @@ export const useCapsController = ({
 
     s.isAttacking = true
     s.currentAnimation = Animations.DASH_ATTACK
-    
+
     // Trigger dash movement (like spin attack)
     triggerDashAttack()
-    
+
     // Slash VFX
     slashFlipX.value = 1
-    slashEmitterRef.current?.emit({ direction: [[-1, -1], [0, 0], [0, 0]] })
+    slashEmitterRef.current?.emit({
+      direction: [
+        [-1, -1],
+        [0, 0],
+        [0, 0],
+      ],
+    })
   }
 
   const executeParry = () => {
     const s = state.current
     const now = Date.now()
-    
+
     // Block if attacking, already parrying, or on cooldown
     if (s.isAttacking || s.isParrying || now < s.parryCooldownEnd) return
 
@@ -169,7 +190,7 @@ export const useCapsController = ({
     s.isParrying = false
     s.parryCooldownEnd = Date.now() + PARRY_COOLDOWN_MS
     setParrying(false)
-    
+
     // Return to stance
     actions[s.currentAnimation]?.fadeOut(0.1)
     actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
@@ -184,6 +205,7 @@ export const useCapsController = ({
     actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
     s.currentAnimation = Animations.STANCE
     s.isInChargeStance = true
+    start()
     setIsCharging(true)
   }
 
@@ -191,6 +213,7 @@ export const useCapsController = ({
     const s = state.current
     s.isInChargeStance = false
     s.chargeProgress = 0
+    stop()
     setIsCharging(false)
   }
 
@@ -206,21 +229,23 @@ export const useCapsController = ({
 
   const onMouseUp = () => {
     const s = state.current
-
+  
     if (!s.isHolding) return
     if (s.isAttacking || s.isParrying) {
       s.isHolding = false
       exitChargeStance()
       return
     }
-
+  
     const wasInChargeStance = s.isInChargeStance
     const wasFullyCharged = s.chargeProgress >= 1
-
+  
     s.isHolding = false
     exitChargeStance()
-
-    // Dash attack if player is dashing
+  
+    // ⬇️ snapshot read
+    const { isDashing } = useGameStore.getState()
+  
     if (isDashing) {
       executeDashAttack()
     } else if (wasInChargeStance && wasFullyCharged) {
@@ -229,6 +254,7 @@ export const useCapsController = ({
       executeAttack(s.nextAttack)
     }
   }
+
 
   const onRightClick = () => {
     executeParry()
@@ -241,7 +267,12 @@ export const useCapsController = ({
   useEffect(() => {
     const onFinished = (e: { action: THREE.AnimationAction }) => {
       const finishedName = e.action.getClip().name as ActionName
-      const attackAnimations: ActionName[] = [Animations.ATTACK_01, Animations.ATTACK_02, Animations.SPIN_ATTACK, Animations.DASH_ATTACK]
+      const attackAnimations: ActionName[] = [
+        Animations.ATTACK_01,
+        Animations.ATTACK_02,
+        Animations.SPIN_ATTACK,
+        Animations.DASH_ATTACK,
+      ]
 
       if (attackAnimations.includes(finishedName)) {
         state.current.isAttacking = false
@@ -255,7 +286,7 @@ export const useCapsController = ({
           actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
           state.current.currentAnimation = Animations.STANCE
         }
-        
+
         if (finishedName === Animations.DASH_ATTACK) {
           actions[state.current.currentAnimation]?.fadeOut(0.1)
           actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
@@ -288,7 +319,7 @@ export const useCapsController = ({
     // Find sword bone once
     if (!swordBoneRef.current && swordRef.current?.skeleton) {
       const bones = swordRef.current.skeleton.bones
-      swordBoneRef.current = bones.find(b => b.name === 'arm') || bones[bones.length - 1]
+      swordBoneRef.current = bones.find((b) => b.name === 'arm') || bones[bones.length - 1]
     }
 
     // Copy bone's world transform to swordRef2
@@ -321,32 +352,45 @@ export const useCapsController = ({
       }
     } else if (s.isAttacking) {
       swordGlowUniform.value = 1
-      const direction = s.nextAttack === Animations.ATTACK_02 ? [[1, 1], [-1, -1], [0, 0]] : [[-1, -1], [-1, -1], [0, 0]]
+      const direction =
+        s.nextAttack === Animations.ATTACK_02
+          ? [
+              [1, 1],
+              [-1, -1],
+              [0, 0],
+            ]
+          : [
+              [-1, -1],
+              [-1, -1],
+              [0, 0],
+            ]
       sparkEmitterRef.current?.emit({ direction: direction })
-      
+
+      const swordHitbox = useGameStore.getState().swordHitbox
       // Check sword hitbox for enemy hits using actual sword world position
       // The sword plane is centered at swordHitbox.position (world space)
       const hitboxX = swordHitbox.position.x
       const hitboxY = swordHitbox.position.y
       const hitboxZ = swordHitbox.position.z
-      
+
       // Use sword height as radius (1.7 / 2 ≈ 0.85, but expand a bit for feel)
       const hitboxRadius = swordHitbox.height * 0.8
-      
+
       // Determine damage based on attack type
-      const damage = s.currentAnimation === Animations.SPIN_ATTACK ? SPIN_ATTACK_DAMAGE : ATTACK_DAMAGE
-      
+      const damage =
+        s.currentAnimation === Animations.SPIN_ATTACK ? SPIN_ATTACK_DAMAGE : ATTACK_DAMAGE
+
       // Deal damage only to enemies not yet hit in this attack
       const newHits = dealDamageInArea(
-        hitboxX, 
-        hitboxZ, 
-        hitboxRadius, 
-        damage, 
+        hitboxX,
+        hitboxZ,
+        hitboxRadius,
+        damage,
         'player',
         hitboxY, // Pass sword Y position for VFX
         hitEntitiesRef.current // Pass already-hit entities to exclude
       )
-      
+
       // Track new hits
       for (const hitId of newHits) {
         hitEntitiesRef.current.add(hitId)
@@ -356,10 +400,10 @@ export const useCapsController = ({
     }
   })
 
-  return { 
-    onMouseDown, 
-    onMouseUp, 
+  return {
+    onMouseDown,
+    onMouseUp,
     onRightClick,
-    isAttacking: state.current.isAttacking
+    isAttacking: state.current.isAttacking,
   }
 }

@@ -17,6 +17,7 @@
     "gsap": "^3.14.2",
     "koota": "^0.6.4",
     "makio-meshline": "^1.2.0",
+    "playroomkit": "^0.0.95",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.182.0",

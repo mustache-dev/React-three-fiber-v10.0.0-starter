@@ -52,6 +52,8 @@ export const TargetPosition = trait({ x: 0, y: 0, z: 0 })
 /** Target velocity for smooth steering (velocity damps toward this) */
 export const TargetVelocity = trait({ x: 0, y: 0, z: 0 })
 
+export const isSpawned = trait({value: false})
+
 // ============================================
 // VISUAL TRAITS
 // ============================================

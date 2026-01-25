@@ -1,7 +1,5 @@
-import { useTexture } from "@react-three/drei"
 import { VFXParticles } from "../VFXParticles"
 import { SphereGeometry } from "three/webgpu"
-import { PlaneGeometry } from "three/webgpu"
 import { TextureLoader } from "three/webgpu"
 import { texture, uv, vec4 } from "three/tsl"
 export const Impact = () => {
@@ -23,7 +21,7 @@ export const Impact = () => {
                 fadeOpacity={[1, 0]}
                 gravity={[0, 0, 0]}
                 speed={[10, 50]}
-                lifetime={[0.1, 0.4]}
+                lifetime={[0.1, 0.8]}
                 velocityCurve={{
                     points: [
                         {

@@ -19,6 +19,7 @@ import {
 } from './types'
 import { eventBus, EVENTS } from '../constants'
 import { useVFXEmitter } from '@/components/VFXParticles/VFXEmitter'
+import { me } from 'playroomkit'
 
 const PARRY_SPEED = 2
 const ATTACK_DAMAGE = 10
@@ -55,9 +56,6 @@ export const useCapsController = ({
   const triggerSpinAttack = useGameStore((s) => s.triggerSpinAttack)
   const triggerDashAttack = useGameStore((s) => s.triggerDashAttack)
   const triggerAttackDash = useGameStore((s) => s.triggerAttackDash)
-  
-
-
 
   // Animation state
   const state = useRef<AnimationState>({
@@ -229,23 +227,23 @@ export const useCapsController = ({
 
   const onMouseUp = () => {
     const s = state.current
-  
+
     if (!s.isHolding) return
     if (s.isAttacking || s.isParrying) {
       s.isHolding = false
       exitChargeStance()
       return
     }
-  
+
     const wasInChargeStance = s.isInChargeStance
     const wasFullyCharged = s.chargeProgress >= 1
-  
+
     s.isHolding = false
     exitChargeStance()
-  
+
     // ⬇️ snapshot read
     const { isDashing } = useGameStore.getState()
-  
+
     if (isDashing) {
       executeDashAttack()
     } else if (wasInChargeStance && wasFullyCharged) {
@@ -254,7 +252,6 @@ export const useCapsController = ({
       executeAttack(s.nextAttack)
     }
   }
-
 
   const onRightClick = () => {
     executeParry()
@@ -397,6 +394,10 @@ export const useCapsController = ({
       }
     } else if (!s.isParrying) {
       swordGlowUniform.value = THREE.MathUtils.lerp(currentGlow, 0, delta * 12)
+    }
+
+    if (me()) {
+      me().setState('animation', s.currentAnimation)
     }
   })
 

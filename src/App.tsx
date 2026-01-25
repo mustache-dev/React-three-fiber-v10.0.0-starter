@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { Lights } from './components/lights'
 import { Html, KeyboardControls, OrbitControls, Preload, Stats } from '@react-three/drei'
 import { PostProcessing } from './components/postprocessing'
-import { EnemySystem } from './ecs/enemy'
+import { MultiplayerSystem } from './ecs/players'
 import { Floor } from './components/floor'
 import { HalfFloatType } from 'three'
 import { PlayerController } from './PlayerController'
@@ -48,6 +48,7 @@ function App() {
 
           {/* ECS Enemy System - spawns and manages enemy entities */}
           {/*<EnemySystem initialCount={10} spawnRadius={6} />*/}
+          <MultiplayerSystem /> {/* Added MultiplayerSystem */}
           {/*<Stats />*/}
           <Preload all />
         </Suspense>

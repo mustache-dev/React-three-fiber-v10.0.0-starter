@@ -14,7 +14,8 @@ import { Energy } from '@/components/particles/energy'
 // Debug flag for hitbox visualization
 const DEBUG_HITBOX = false
 
-export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) => {
+export type CapsProps = ThreeElements['group']
+export const Caps = forwardRef<CapsHandle, CapsProps>(({ ...props }, ref) => {
   // Refs
   const group = useRef<THREE.Group>(null)
   const swordRef = useRef<THREE.SkinnedMesh>(null)
@@ -26,7 +27,6 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const sparkEmitterRef = useRef<{ emit: (overrides?: Record<string, unknown>) => void } | null>(
     null
   )
-
 
   // Store
   const setTarget = useGameStore((s) => s.setTarget)
@@ -43,7 +43,8 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
   const { actions, mixer } = useAnimations(animations, group)
 
   // Controller hook - handles all animation logic
-  const { onMouseDown, onMouseUp, onRightClick, isAttacking } = useCapsController({
+  // Only use controller if NOT remote
+  const controller = useCapsController({
     actions,
     mixer,
     swordRef,
@@ -52,6 +53,8 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     slashEmitterRef,
     sparkEmitterRef,
   })
+
+  const { onMouseDown, onMouseUp, onRightClick, isAttacking } = controller
 
   // Update sword hitbox world transform in store (for hit detection)
   useFrame(() => {
@@ -71,10 +74,6 @@ export const Caps = forwardRef<CapsHandle, ThreeElements['group']>((props, ref) 
     onMouseUp,
     onRightClick,
   ])
-
-  useEffect(() => {
-    setTarget(target.current)
-  }, [setTarget])
 
   // Materials
   const capsMaterial = useMemo(() => createCapsMaterial(), [])

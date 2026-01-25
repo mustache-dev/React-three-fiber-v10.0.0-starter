@@ -9,10 +9,9 @@ export const Particles = () => {
     <>
       <Slash />
       <Dodge />
-      {/*<Energy />*/}
-      <Impact />
+      {/*<Impact />
       <Spawn />
-      <EnemyDeath />
+      <EnemyDeath />*/}
     </>
   )
 }

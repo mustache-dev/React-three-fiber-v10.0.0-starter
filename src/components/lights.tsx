@@ -42,7 +42,7 @@ export const Lights = () => {
         shadow-bias={-0.01}
         ref={directionalLight}
       />
-      <pointLight position={[0, 10, 0]} intensity={10} color={"#ffffff"} />
+      {/*<pointLight position={[0, 10, 0]} intensity={10} color={"#ffffff"} />*/}
       <ambientLight intensity={0.2} />
     </>
   );

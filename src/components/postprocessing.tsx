@@ -18,7 +18,7 @@ export const PostProcessing = () => {
       // Use blurAmount from uniforms (or from outer scope via closure)
       const bloomPass = bloom(beauty, 0.25, 0, 0);
       const blurNode = 1;
-      const mBlur = motionBlur(beauty, vel.mul(blurNode)).add(bloomPass);
+      const mBlur = beauty.add(bloomPass);
 
       // Add vignette effect for polish
       // Creates a darkening at the edges of the screen

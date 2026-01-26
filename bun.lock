@@ -6,6 +6,7 @@
       "dependencies": {
         "@react-three/drei": "^11.0.0-alpha.4",
         "@react-three/fiber": "10.0.0-alpha.2",
+        "r3f-vfx": "^0.0.1",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "three": "^0.182.0",
@@ -488,6 +489,8 @@
     "promise-worker-transferable": ["promise-worker-transferable@1.0.4", "", { "dependencies": { "is-promise": "^2.1.0", "lie": "^3.0.2" } }, "sha512-bN+0ehEnrXfxV2ZQvU2PetO0n4gqBD4ulq3MI1WOPLgr7/Mg9yRQkX5+0v1vagr74ZTsl7XtzlaYDo2EuCeYJw=="],
 
     "punycode": ["punycode@2.3.1", "", {}, "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="],
+
+    "r3f-vfx": ["r3f-vfx@0.0.1", "", { "dependencies": { "zustand": "5.0.10" }, "peerDependencies": { "@react-three/fiber": ">=9.0.0 || >=10.0.0", "react": ">=19.0.0", "react-dom": ">=19.0.0", "three": ">=0.182.0" } }, "sha512-9IDQvoYuVVU3MgNHP1pHEsSlMVwFGAJBqEzFPc9yVWzd+Uxm3zgqx2qToqdrjz7Ip4w6AOGxhY3rc0qnUFy+JQ=="],
 
     "react": ["react@19.2.3", "", {}, "sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA=="],
 

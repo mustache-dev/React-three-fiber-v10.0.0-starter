@@ -71,6 +71,13 @@ export const useCapsController = ({
     parryCooldownEnd: 0,
   })
 
+  // Animation parameters for sync
+  const animationParams = useRef({
+    speed: 1,
+    clamp: false,
+    loop: true
+  })
+
   // ---------------------------------------------------------------------------
   // Attack System
   // ---------------------------------------------------------------------------
@@ -86,6 +93,8 @@ export const useCapsController = ({
     action.setLoop(THREE.LoopOnce, 1)
     action.setEffectiveTimeScale(ATTACK_SPEED)
     action.clampWhenFinished = true
+
+    animationParams.current = { speed: ATTACK_SPEED, clamp: true, loop: false }
 
     s.isAttacking = true
     s.currentAnimation = attackName
@@ -123,6 +132,8 @@ export const useCapsController = ({
     action.setLoop(THREE.LoopOnce, 1)
     action.setEffectiveTimeScale(SPIN_ATTACK_SPEED)
     action.clampWhenFinished = true
+    
+    animationParams.current = { speed: SPIN_ATTACK_SPEED, clamp: true, loop: false }
 
     s.isAttacking = true
     s.currentAnimation = Animations.SPIN_ATTACK
@@ -140,6 +151,8 @@ export const useCapsController = ({
     action.setLoop(THREE.LoopOnce, 1)
     action.setEffectiveTimeScale(DASH_ATTACK_SPEED)
     action.clampWhenFinished = true
+
+    animationParams.current = { speed: DASH_ATTACK_SPEED, clamp: true, loop: false }
 
     s.isAttacking = true
     s.currentAnimation = Animations.DASH_ATTACK
@@ -177,6 +190,8 @@ export const useCapsController = ({
     action.setEffectiveTimeScale(PARRY_SPEED)
     action.clampWhenFinished = true
 
+    animationParams.current = { speed: PARRY_SPEED, clamp: true, loop: false }
+
     s.isParrying = true
     s.parryStartTime = now
     s.currentAnimation = parryName
@@ -193,6 +208,7 @@ export const useCapsController = ({
     actions[s.currentAnimation]?.fadeOut(0.1)
     actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
     s.currentAnimation = Animations.STANCE
+    animationParams.current = { speed: 1, clamp: false, loop: true }
   }
 
   const enterChargeStance = () => {
@@ -202,6 +218,7 @@ export const useCapsController = ({
     actions[s.currentAnimation]?.fadeOut(0.1)
     actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
     s.currentAnimation = Animations.STANCE
+    animationParams.current = { speed: 1, clamp: false, loop: true }
     s.isInChargeStance = true
     start()
     setIsCharging(true)
@@ -282,12 +299,14 @@ export const useCapsController = ({
           actions[state.current.currentAnimation]?.fadeOut(0.1)
           actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
           state.current.currentAnimation = Animations.STANCE
+          animationParams.current = { speed: 1, clamp: false, loop: true }
         }
 
         if (finishedName === Animations.DASH_ATTACK) {
           actions[state.current.currentAnimation]?.fadeOut(0.1)
           actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
           state.current.currentAnimation = Animations.STANCE
+          animationParams.current = { speed: 1, clamp: false, loop: true }
         }
       }
       // Parry is handled by frame loop timer, not animation finish event
@@ -302,6 +321,7 @@ export const useCapsController = ({
     const action = actions[Animations.STANCE]?.reset().fadeIn(0.1).play()
     if (action) {
       state.current.currentAnimation = Animations.STANCE
+      animationParams.current = { speed: 1, clamp: false, loop: true }
     }
   }, [actions])
 
@@ -397,7 +417,12 @@ export const useCapsController = ({
     }
 
     if (me()) {
-      me().setState('animation', s.currentAnimation)
+      me().setState('animation', {
+        name: s.currentAnimation,
+        speed: animationParams.current.speed,
+        clamp: animationParams.current.clamp,
+        loop: animationParams.current.loop
+      })
     }
   })
 

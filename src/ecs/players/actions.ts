@@ -22,7 +22,7 @@ export const playerActions = createActions((world) => ({
     const entity = world.spawn(
       isOtherPlayer,
       PlayerId({ id }),
-      Animation({ current: null }),
+      Animation({ name: null, speed: 1, clamp: false, loop: false }),
       PlayroomStateTrait({ state }),
       Position({ x: 0, y: 0, z: 0 }),
       QuaternionTrait({ x: 0, y: 0, z: 0, w: 1 }),

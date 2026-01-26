@@ -37,6 +37,36 @@ export function OtherPlayerMesh({ entity }: OtherPlayerMeshProps) {
     }
   }, [entity])
 
+  // Sync animation
+  const currentActionName = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!animation || !animation.name) return
+
+    const newName = animation.name
+    const action = actions[newName]
+    if (!action) return
+
+    // If same animation, just update parameters
+    if (currentActionName.current === newName) {
+      action.setEffectiveTimeScale(animation.speed)
+      return
+    }
+
+    // Fade out old
+    if (currentActionName.current) {
+      actions[currentActionName.current]?.fadeOut(0.1)
+    }
+
+    // Play new
+    action.reset().fadeIn(0.1).play()
+    action.setEffectiveTimeScale(animation.speed)
+    action.setLoop(animation.loop ? THREE.LoopRepeat : THREE.LoopOnce, 1)
+    action.clampWhenFinished = animation.clamp
+
+    currentActionName.current = newName
+  }, [animation?.name, animation?.speed, animation?.loop, animation?.clamp, actions])
+
   // Update transform
   useFrame(() => {
     if (!group.current) return
@@ -47,9 +77,6 @@ export function OtherPlayerMesh({ entity }: OtherPlayerMeshProps) {
 
     if (quaternion) {
       group.current.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w)
-    }
-    if (animation) {
-      console.log(animation.current)
     }
   })
 

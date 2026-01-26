@@ -21,9 +21,18 @@ export const syncPlayerStateSystem = (world: World) => {
     const rot = internalState.quaternion || playroomState.getState('quaternion')
 
     const animation = internalState.animation || playroomState.getState('animation')
-
+    
     if (animation) {
-      entity.set(Animation, { current: animation })
+      if (typeof animation === 'string') {
+         entity.set(Animation, { name: animation, speed: 1, clamp: false, loop: true })
+      } else {
+         entity.set(Animation, { 
+           name: animation.name, 
+           speed: animation.speed, 
+           clamp: animation.clamp, 
+           loop: animation.loop 
+         })
+      }
     }
 
     if (Array.isArray(rot) && rot.length >= 4) {

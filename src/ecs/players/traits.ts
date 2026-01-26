@@ -6,7 +6,12 @@ export const isOtherPlayer = trait()
 
 export const PlayerId = trait({ id: '' })
 
-export const Animation = trait(() => ({ current: null as THREE.AnimationClip | null }))
+export const Animation = trait(() => ({
+  name: null as string | null,
+  speed: 1,
+  clamp: false,
+  loop: false, // false = LoopOnce, true = LoopRepeat
+}))
 export const PlayroomStateTrait = trait(() => ({ state: null as PlayerState | null }))
 
 export const Position = trait({ x: 0, y: 0, z: 0 })
